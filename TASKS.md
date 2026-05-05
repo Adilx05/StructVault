@@ -1,0 +1,190 @@
+# StructVault Tasks
+
+---
+
+## 🧱 Phase 1 – Solution Setup
+- [ ] Create solution with layered architecture:
+  - Domain
+  - Application
+  - Infrastructure
+  - Persistence
+  - Desktop (WPF)
+- [ ] Setup WPF project with MahApps.Metro
+- [ ] Implement MVVM base:
+  - ViewModelBase (INotifyPropertyChanged)
+  - RelayCommand / AsyncCommand
+
+---
+
+## 🔐 Phase 2 – Security Core
+
+### Implementation
+- [ ] Implement Argon2id key derivation service
+- [ ] Implement AES-256-GCM encryption service
+- [ ] Design QPS file format (header + salt + iv + encrypted data)
+
+### Tests
+- [ ] Test: same password → same key (with same salt)
+- [ ] Test: different password → different key
+- [ ] Test: encryption → decryption returns original data
+- [ ] Test: tampered data → decryption fails
+
+---
+
+## 📦 Phase 3 – QPS File System
+
+### Implementation
+- [ ] Implement QPS file writer
+- [ ] Implement QPS file reader
+- [ ] Handle header parsing
+- [ ] Handle versioning support
+
+### Tests
+- [ ] Test: create vault → file is generated
+- [ ] Test: open vault → data loads correctly
+- [ ] Test: invalid password → open fails
+- [ ] Test: corrupted file → handled gracefully
+
+---
+
+## 🗄️ Phase 4 – Persistence Layer
+
+### Implementation
+- [ ] Define SQLite schema (VaultNode, VaultField)
+- [ ] Setup in-memory SQLite lifecycle
+- [ ] Implement DB serialization/deserialization
+
+### Tests
+- [ ] Test: create node → stored correctly
+- [ ] Test: create field → linked to node
+- [ ] Test: delete node → cascade delete fields
+- [ ] Test: ordering works as expected
+
+---
+
+## 🌲 Phase 5 – Core Domain Logic
+
+### Implementation
+- [ ] Node CRUD operations
+- [ ] Field CRUD operations
+- [ ] Node hierarchy (parent-child)
+- [ ] Field ordering logic
+
+### Tests
+- [ ] Test: nested node structure builds correctly
+- [ ] Test: node rename works
+- [ ] Test: duplicate field keys allowed
+- [ ] Test: field updates persist
+
+---
+
+## 🖥️ Phase 6 – UI Core (WPF + MahApps)
+
+### Implementation
+- [ ] MainWindow layout (Tree + Detail panel)
+- [ ] Bind TreeView to node structure
+- [ ] Implement dynamic field rendering
+- [ ] Context menus for Node and Field
+
+### Tests (UI / ViewModel level)
+- [ ] Test: selecting node updates detail panel
+- [ ] Test: adding node updates tree
+- [ ] Test: adding field updates UI model
+
+---
+
+## 💾 Phase 7 – Save / Load Workflow
+
+### Implementation
+- [ ] Implement manual save system
+- [ ] Implement dirty flag tracking
+- [ ] Prompt user on exit if unsaved changes exist
+- [ ] Create `.bak` backup before overwrite
+
+### Tests
+- [ ] Test: dirty flag triggers correctly
+- [ ] Test: save clears dirty state
+- [ ] Test: backup file is created
+- [ ] Test: restore from backup works
+
+---
+
+## 🔍 Phase 8 – Search Feature
+
+### Implementation
+- [ ] Implement global search (nodes + fields)
+- [ ] Add filtering support
+
+### Tests
+- [ ] Test: search by node name
+- [ ] Test: search by field value
+- [ ] Test: partial match works
+
+---
+
+## 📋 Phase 9 – Clipboard Security
+
+### Implementation
+- [ ] Copy field value to clipboard
+- [ ] Auto-clear clipboard after configurable time
+
+### Tests
+- [ ] Test: value copied correctly
+- [ ] Test: clipboard cleared after timeout
+- [ ] Test: disable auto-clear works
+
+---
+
+## 🔒 Phase 10 – Idle Lock
+
+### Implementation
+- [ ] Track user inactivity
+- [ ] Lock vault after timeout
+- [ ] Prompt for password to unlock
+
+### Tests
+- [ ] Test: idle timer triggers lock
+- [ ] Test: correct password unlocks
+- [ ] Test: incorrect password fails
+
+---
+
+## ⚙️ Phase 11 – Settings
+
+### Implementation
+- [ ] Clipboard settings (enable/disable + duration)
+- [ ] Idle lock settings (enable/disable + duration)
+
+### Tests
+- [ ] Test: settings persist correctly
+- [ ] Test: settings applied at runtime
+
+---
+
+## 🔐 Phase 12 – Password Management
+
+### Implementation
+- [ ] Change master password
+- [ ] Re-encrypt vault with new password
+
+### Tests
+- [ ] Test: old password no longer works
+- [ ] Test: new password opens vault
+- [ ] Test: data integrity preserved
+
+---
+
+## 🚀 Phase 13 – Final Polish
+
+- [ ] Improve UI responsiveness
+- [ ] Improve error handling
+- [ ] Add loading states
+- [ ] Add basic logging
+
+---
+
+## 🧪 Optional Enhancements
+
+- [ ] Drag & drop node ordering
+- [ ] Field reordering (drag & drop)
+- [ ] Theme switching
