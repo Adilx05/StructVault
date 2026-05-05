@@ -3,7 +3,7 @@
 ---
 
 ## 🧱 Phase 1 – Solution Setup
-- [ ] Create solution with layered architecture:
+- [x] Create solution with layered architecture:
   - Domain
   - Application
   - Infrastructure
