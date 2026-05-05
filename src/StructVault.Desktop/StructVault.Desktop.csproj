@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StructVault.Application\StructVault.Application.csproj" />
+    <ProjectReference Include="..\StructVault.Domain\StructVault.Domain.csproj" />
+    <ProjectReference Include="..\StructVault.Infrastructure\StructVault.Infrastructure.csproj" />
+    <ProjectReference Include="..\StructVault.Persistence\StructVault.Persistence.csproj" />
+  </ItemGroup>
+</Project>
