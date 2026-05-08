@@ -34,7 +34,7 @@
 ## 📦 Phase 3 – QPS File System
 
 ### Implementation
-- [ ] Implement QPS file writer
+- [x] Implement QPS file writer
 - [ ] Implement QPS file reader
 - [ ] Handle header parsing
 - [ ] Handle versioning support
