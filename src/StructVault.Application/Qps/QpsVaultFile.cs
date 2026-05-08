@@ -45,10 +45,7 @@ public sealed class QpsVaultFile
         byte[] ciphertext,
         byte[] authenticationTag)
     {
-        if (version != QpsFileFormat.CurrentVersion)
-        {
-            throw new NotSupportedException($"QPS file version {version} is not supported.");
-        }
+        QpsFileFormat.EnsureSupportedVersion(version);
 
         if (salt.Length < QpsFileFormat.MinimumSaltSizeInBytes)
         {

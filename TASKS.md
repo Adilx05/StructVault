@@ -37,7 +37,7 @@
 - [x] Implement QPS file writer
 - [x] Implement QPS file reader
 - [x] Handle header parsing
-- [ ] Handle versioning support
+- [x] Handle versioning support
 
 ### Tests
 - [ ] Test: create vault → file is generated
