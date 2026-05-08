@@ -41,7 +41,7 @@
 
 ### Tests
 - [x] Test: create vault → file is generated
-- [ ] Test: open vault → data loads correctly
+- [x] Test: open vault → data loads correctly
 - [ ] Test: invalid password → open fails
 - [ ] Test: corrupted file → handled gracefully
 
