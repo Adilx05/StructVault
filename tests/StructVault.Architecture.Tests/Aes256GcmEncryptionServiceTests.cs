@@ -106,7 +106,7 @@ public sealed class Aes256GcmEncryptionServiceTests
     {
         Aes256GcmEncryptionService service = new();
 
-        Assert.Throws<ArgumentException>(() => service.Encrypt([1, 2, 3], new byte[31]));
+        Assert.Throws<ArgumentException>(() => service.Encrypt(new byte[] { 1, 2, 3 }, new byte[31]));
     }
 
     [Fact]
@@ -114,8 +114,8 @@ public sealed class Aes256GcmEncryptionServiceTests
     {
         Aes256GcmEncryptionService service = new();
 
-        Assert.Throws<ArgumentException>(() => service.Decrypt([], ValidKey, new byte[11], new byte[16]));
-        Assert.Throws<ArgumentException>(() => service.Decrypt([], ValidKey, new byte[12], new byte[15]));
+        Assert.Throws<ArgumentException>(() => service.Decrypt(Array.Empty<byte>(), ValidKey, new byte[11], new byte[16]));
+        Assert.Throws<ArgumentException>(() => service.Decrypt(Array.Empty<byte>(), ValidKey, new byte[12], new byte[15]));
     }
 
     [Fact]
