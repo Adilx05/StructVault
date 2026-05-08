@@ -40,7 +40,7 @@
 - [x] Handle versioning support
 
 ### Tests
-- [ ] Test: create vault → file is generated
+- [x] Test: create vault → file is generated
 - [ ] Test: open vault → data loads correctly
 - [ ] Test: invalid password → open fails
 - [ ] Test: corrupted file → handled gracefully
