@@ -69,6 +69,38 @@ public sealed class QpsOpenVaultFileTests
     }
 
     [Fact]
+    public async Task OpenVaultFileFailsWhenPasswordIsInvalid()
+    {
+        const string invalidPassword = "incorrect horse battery staple";
+        string directoryPath = CreateUniqueTempDirectoryPath();
+        string vaultFilePath = Path.Combine(directoryPath, "vault.qps");
+        byte[] plaintextVaultData = Encoding.UTF8.GetBytes(
+            "StructVault QPS invalid password test payload v1\nnode:Root\nfield:secret=encrypted-only");
+        byte[] key = await DeriveVaultKey(VaultPassword, ValidSalt);
+        AesGcmEncryptionResult encryptionResult = await EncryptVaultData(plaintextVaultData, key);
+        byte[] qpsFileBytes = await CreateQpsVaultFile(encryptionResult);
+        WriteQpsVaultFileCommandHandler writeHandler = new(new FileSystemQpsFileWriter());
+        OpenQpsVaultFileQueryHandler openHandler = new(
+            new FileSystemQpsFileReader(),
+            new Argon2idKeyDerivationService(),
+            new Aes256GcmEncryptionService());
+
+        try
+        {
+            await writeHandler.Handle(new WriteQpsVaultFileCommand(vaultFilePath, qpsFileBytes), CancellationToken.None);
+
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () =>
+                await openHandler.Handle(new OpenQpsVaultFileQuery(vaultFilePath, invalidPassword), CancellationToken.None));
+        }
+        finally
+        {
+            ZeroMemory(key);
+            ZeroMemory(plaintextVaultData);
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    [Fact]
     public async Task OpenVaultFileRejectsBlankPathBeforeReading()
     {
         RecordingQpsFileReader reader = new();
