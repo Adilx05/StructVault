@@ -36,7 +36,7 @@
 ### Implementation
 - [x] Implement QPS file writer
 - [x] Implement QPS file reader
-- [ ] Handle header parsing
+- [x] Handle header parsing
 - [ ] Handle versioning support
 
 ### Tests
