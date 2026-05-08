@@ -9,7 +9,12 @@ public sealed class ParseQpsVaultFileQueryHandler : IRequestHandler<ParseQpsVaul
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        ReadOnlySpan<byte> fileBytes = request.FileBytes.Span;
+        return Task.FromResult(Parse(request.FileBytes));
+    }
+
+    internal static QpsVaultFile Parse(ReadOnlyMemory<byte> qpsFileBytes)
+    {
+        ReadOnlySpan<byte> fileBytes = qpsFileBytes.Span;
         QpsHeader header = QpsFileFormat.ReadHeader(fileBytes);
         Validate(header);
 
@@ -22,7 +27,7 @@ public sealed class ParseQpsVaultFileQueryHandler : IRequestHandler<ParseQpsVaul
 
         if (fileBytes.Length != requiredLength)
         {
-            throw new ArgumentException("QPS data length does not match the header metadata.", nameof(request));
+            throw new ArgumentException("QPS data length does not match the header metadata.", nameof(qpsFileBytes));
         }
 
         int offset = QpsFileFormat.HeaderSizeInBytes;
@@ -34,12 +39,12 @@ public sealed class ParseQpsVaultFileQueryHandler : IRequestHandler<ParseQpsVaul
         offset += checked((int)header.CiphertextLength);
         byte[] authenticationTag = fileBytes.Slice(offset, header.AuthenticationTagLength).ToArray();
 
-        return Task.FromResult(new QpsVaultFile(
+        return new QpsVaultFile(
             header.Version,
             salt,
             initializationVector,
             ciphertext,
-            authenticationTag));
+            authenticationTag);
     }
 
     private static void Validate(QpsHeader header)
