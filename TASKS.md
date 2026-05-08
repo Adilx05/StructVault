@@ -43,7 +43,7 @@
 - [x] Test: create vault → file is generated
 - [x] Test: open vault → data loads correctly
 - [x] Test: invalid password → open fails
-- [ ] Test: corrupted file → handled gracefully
+- [x] Test: corrupted file → handled gracefully
 
 ---
 
