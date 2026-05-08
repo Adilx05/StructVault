@@ -225,6 +225,324 @@ public sealed class VaultFieldPersistenceTests
             CreatedAtUtc));
     }
 
+
+    [Fact]
+    public async Task GetVaultFieldByIdQueryHandlerReturnsCreatedField()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultFieldWriter fieldStore = new();
+        CreateVaultNodeCommandHandler nodeHandler = new(new SqliteVaultNodeWriter());
+        CreateVaultFieldCommandHandler createHandler = new(fieldStore);
+        GetVaultFieldByIdQueryHandler getHandler = new(fieldStore);
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await nodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "root-node", null, "Root", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, " login-field ", " root-node ", " username ", new byte[] { 1, 2, 3 }, 2, CreatedAtUtc, UpdatedAtUtc),
+            CancellationToken.None);
+
+        VaultFieldRecord? field = await getHandler.Handle(new GetVaultFieldByIdQuery(connection, " login-field "), CancellationToken.None);
+
+        Assert.NotNull(field);
+        Assert.Equal("login-field", field.Id);
+        Assert.Equal("root-node", field.NodeId);
+        Assert.Equal("username", field.Key);
+        Assert.Equal(new byte[] { 1, 2, 3 }, field.Value);
+        Assert.Equal(2, field.SortOrder);
+        Assert.Equal(CreatedAtUtc, field.CreatedAtUtc);
+        Assert.Equal(UpdatedAtUtc, field.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task GetVaultFieldByIdQueryHandlerReturnsNullForMissingField()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        GetVaultFieldByIdQueryHandler getHandler = new(new SqliteVaultFieldWriter());
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+
+        VaultFieldRecord? field = await getHandler.Handle(new GetVaultFieldByIdQuery(connection, "missing-field"), CancellationToken.None);
+
+        Assert.Null(field);
+    }
+
+    [Fact]
+    public async Task ListVaultFieldsByNodeIdQueryHandlerReturnsFieldsInStableOrder()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultFieldWriter fieldStore = new();
+        CreateVaultNodeCommandHandler nodeHandler = new(new SqliteVaultNodeWriter());
+        CreateVaultFieldCommandHandler createHandler = new(fieldStore);
+        ListVaultFieldsByNodeIdQueryHandler listHandler = new(fieldStore);
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await nodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "root-node", null, "Root", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await nodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "other-node", null, "Other", 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-c", "root-node", "notes", new byte[] { 3 }, 2, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-b", "root-node", "password", new byte[] { 2 }, 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-a", "root-node", "username", new byte[] { 1 }, 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "other-field", "other-node", "username", new byte[] { 9 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+
+        IReadOnlyList<VaultFieldRecord> fields = await listHandler.Handle(new ListVaultFieldsByNodeIdQuery(connection, " root-node "), CancellationToken.None);
+
+        Assert.Equal(new[] { "field-a", "field-b", "field-c" }, fields.Select(field => field.Id));
+    }
+
+    [Fact]
+    public async Task UpdateVaultFieldCommandHandlerUpdatesFieldValues()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultFieldWriter fieldStore = new();
+        CreateVaultNodeCommandHandler nodeHandler = new(new SqliteVaultNodeWriter());
+        CreateVaultFieldCommandHandler createHandler = new(fieldStore);
+        UpdateVaultFieldCommandHandler updateHandler = new(fieldStore);
+        GetVaultFieldByIdQueryHandler getHandler = new(fieldStore);
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await nodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "root-node", null, "Root", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field", "root-node", "username", new byte[] { 1 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+
+        bool updated = await updateHandler.Handle(
+            new UpdateVaultFieldCommand(connection, " field ", " password ", new byte[] { 4, 5, 6 }, 5, UpdatedAtUtc),
+            CancellationToken.None);
+        VaultFieldRecord? field = await getHandler.Handle(new GetVaultFieldByIdQuery(connection, "field"), CancellationToken.None);
+
+        Assert.True(updated);
+        Assert.NotNull(field);
+        Assert.Equal("password", field.Key);
+        Assert.Equal(new byte[] { 4, 5, 6 }, field.Value);
+        Assert.Equal(5, field.SortOrder);
+        Assert.Equal(CreatedAtUtc, field.CreatedAtUtc);
+        Assert.Equal(UpdatedAtUtc, field.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task UpdateVaultFieldCommandHandlerReturnsFalseForMissingField()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        UpdateVaultFieldCommandHandler updateHandler = new(new SqliteVaultFieldWriter());
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+
+        bool updated = await updateHandler.Handle(
+            new UpdateVaultFieldCommand(connection, "missing-field", "username", new byte[] { 1 }, 0, UpdatedAtUtc),
+            CancellationToken.None);
+
+        Assert.False(updated);
+    }
+
+    [Fact]
+    public async Task DeleteVaultFieldCommandHandlerDeletesOnlyRequestedField()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultFieldWriter fieldStore = new();
+        CreateVaultNodeCommandHandler nodeHandler = new(new SqliteVaultNodeWriter());
+        CreateVaultFieldCommandHandler createHandler = new(fieldStore);
+        DeleteVaultFieldCommandHandler deleteHandler = new(fieldStore);
+        ListVaultFieldsByNodeIdQueryHandler listHandler = new(fieldStore);
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await nodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "root-node", null, "Root", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-a", "root-node", "username", new byte[] { 1 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-b", "root-node", "password", new byte[] { 2 }, 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+
+        await deleteHandler.Handle(new DeleteVaultFieldCommand(connection, " field-a "), CancellationToken.None);
+
+        IReadOnlyList<VaultFieldRecord> fields = await listHandler.Handle(new ListVaultFieldsByNodeIdQuery(connection, "root-node"), CancellationToken.None);
+        Assert.Equal(new[] { "field-b" }, fields.Select(field => field.Id));
+    }
+
+    [Fact]
+    public async Task CreateVaultFieldCommandHandlerAllowsDuplicateFieldKeys()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultFieldWriter fieldStore = new();
+        CreateVaultNodeCommandHandler nodeHandler = new(new SqliteVaultNodeWriter());
+        CreateVaultFieldCommandHandler createHandler = new(fieldStore);
+        ListVaultFieldsByNodeIdQueryHandler listHandler = new(fieldStore);
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await nodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "root-node", null, "Root", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-a", "root-node", "username", new byte[] { 1 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createHandler.Handle(
+            new CreateVaultFieldCommand(connection, "field-b", "root-node", "username", new byte[] { 2 }, 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+
+        IReadOnlyList<VaultFieldRecord> fields = await listHandler.Handle(new ListVaultFieldsByNodeIdQuery(connection, "root-node"), CancellationToken.None);
+
+        Assert.Equal(new[] { "username", "username" }, fields.Select(field => field.Key));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void GetVaultFieldByIdQueryRejectsMissingFieldId(string? id)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new GetVaultFieldByIdQuery(new UnusedDbConnection(), id!));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ListVaultFieldsByNodeIdQueryRejectsMissingNodeId(string? nodeId)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new ListVaultFieldsByNodeIdQuery(new UnusedDbConnection(), nodeId!));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateVaultFieldCommandRejectsMissingFieldId(string? id)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new UpdateVaultFieldCommand(
+            new UnusedDbConnection(),
+            id!,
+            "username",
+            new byte[] { 1 },
+            0,
+            UpdatedAtUtc));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateVaultFieldCommandRejectsMissingKey(string? key)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new UpdateVaultFieldCommand(
+            new UnusedDbConnection(),
+            "field",
+            key!,
+            new byte[] { 1 },
+            0,
+            UpdatedAtUtc));
+    }
+
+    [Fact]
+    public void UpdateVaultFieldCommandRejectsMissingValue()
+    {
+        Assert.Throws<ArgumentNullException>(() => new UpdateVaultFieldCommand(
+            new UnusedDbConnection(),
+            "field",
+            "username",
+            null!,
+            0,
+            UpdatedAtUtc));
+
+        Assert.Throws<ArgumentException>(() => new UpdateVaultFieldCommand(
+            new UnusedDbConnection(),
+            "field",
+            "username",
+            Array.Empty<byte>(),
+            0,
+            UpdatedAtUtc));
+    }
+
+    [Fact]
+    public void UpdateVaultFieldCommandCopiesValueBytes()
+    {
+        byte[] originalValue = { 1, 2, 3 };
+
+        UpdateVaultFieldCommand command = new(
+            new UnusedDbConnection(),
+            "field",
+            "username",
+            originalValue,
+            0,
+            UpdatedAtUtc);
+
+        originalValue[0] = 9;
+        byte[] commandValue = command.Value;
+        commandValue[1] = 8;
+
+        Assert.Equal(new byte[] { 1, 2, 3 }, command.Value);
+    }
+
+    [Fact]
+    public void UpdateVaultFieldCommandRejectsNegativeSortOrder()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new UpdateVaultFieldCommand(
+            new UnusedDbConnection(),
+            "field",
+            "username",
+            new byte[] { 1 },
+            -1,
+            UpdatedAtUtc));
+    }
+
+    [Fact]
+    public void UpdateVaultFieldCommandRejectsDefaultUpdatedTimestamp()
+    {
+        Assert.Throws<ArgumentException>(() => new UpdateVaultFieldCommand(
+            new UnusedDbConnection(),
+            "field",
+            "username",
+            new byte[] { 1 },
+            0,
+            default));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void DeleteVaultFieldCommandRejectsMissingFieldId(string? id)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new DeleteVaultFieldCommand(new UnusedDbConnection(), id!));
+    }
+
+    [Fact]
+    public void VaultFieldRecordCopiesValueBytes()
+    {
+        byte[] originalValue = { 1, 2, 3 };
+
+        VaultFieldRecord field = new(
+            "field",
+            "node",
+            "username",
+            originalValue,
+            0,
+            CreatedAtUtc,
+            UpdatedAtUtc);
+
+        originalValue[0] = 9;
+        byte[] fieldValue = field.Value;
+        fieldValue[1] = 8;
+
+        Assert.Equal(new byte[] { 1, 2, 3 }, field.Value);
+    }
+
     private static async Task<object?> ExecuteScalarAsync(DbConnection connection, string commandText)
     {
         await using DbCommand command = connection.CreateCommand();
