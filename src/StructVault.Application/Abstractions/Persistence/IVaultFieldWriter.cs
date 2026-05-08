@@ -9,5 +9,7 @@ public interface IVaultFieldWriter
 
     Task<bool> UpdateAsync(DbConnection connection, UpdateVaultFieldCommand field, CancellationToken cancellationToken);
 
+    Task<bool> ReorderAsync(DbConnection connection, ReorderVaultFieldCommand field, CancellationToken cancellationToken);
+
     Task DeleteAsync(DbConnection connection, DeleteVaultFieldCommand field, CancellationToken cancellationToken);
 }
