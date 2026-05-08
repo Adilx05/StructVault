@@ -19,13 +19,13 @@
 ## 🔐 Phase 2 – Security Core
 
 ### Implementation
-- [ ] Implement Argon2id key derivation service
+- [x] Implement Argon2id key derivation service
 - [ ] Implement AES-256-GCM encryption service
 - [ ] Design QPS file format (header + salt + iv + encrypted data)
 
 ### Tests
-- [ ] Test: same password → same key (with same salt)
-- [ ] Test: different password → different key
+- [x] Test: same password → same key (with same salt)
+- [x] Test: different password → different key
 - [ ] Test: encryption → decryption returns original data
 - [ ] Test: tampered data → decryption fails
 
