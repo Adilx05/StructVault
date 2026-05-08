@@ -52,7 +52,7 @@
 ### Implementation
 - [x] Define SQLite schema (VaultNode, VaultField)
 - [x] Setup in-memory SQLite lifecycle
-- [ ] Implement DB serialization/deserialization
+- [x] Implement DB serialization/deserialization
 
 ### Tests
 - [ ] Test: create node → stored correctly
