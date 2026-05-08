@@ -21,7 +21,7 @@
 ### Implementation
 - [x] Implement Argon2id key derivation service
 - [x] Implement AES-256-GCM encryption service
-- [ ] Design QPS file format (header + salt + iv + encrypted data)
+- [x] Design QPS file format (header + salt + iv + encrypted data)
 
 ### Tests
 - [x] Test: same password → same key (with same salt)
