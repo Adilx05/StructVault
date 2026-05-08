@@ -55,7 +55,7 @@
 - [x] Implement DB serialization/deserialization
 
 ### Tests
-- [ ] Test: create node → stored correctly
+- [x] Test: create node → stored correctly
 - [ ] Test: create field → linked to node
 - [ ] Test: delete node → cascade delete fields
 - [ ] Test: ordering works as expected
