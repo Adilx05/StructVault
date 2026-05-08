@@ -48,6 +48,16 @@ public static class QpsFileFormat
             ciphertextLength);
     }
 
+    internal static void ValidateFileLength(ReadOnlySpan<byte> bytes, QpsHeader header, string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+
+        if (bytes.Length != header.RequiredFileLength)
+        {
+            throw new ArgumentException("QPS data length does not match the header metadata.", parameterName);
+        }
+    }
+
     internal static void WriteHeader(Span<byte> destination, QpsHeader header)
     {
         if (destination.Length < HeaderSizeInBytes)
