@@ -51,7 +51,7 @@
 
 ### Implementation
 - [x] Define SQLite schema (VaultNode, VaultField)
-- [ ] Setup in-memory SQLite lifecycle
+- [x] Setup in-memory SQLite lifecycle
 - [ ] Implement DB serialization/deserialization
 
 ### Tests
