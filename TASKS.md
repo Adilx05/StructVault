@@ -66,15 +66,15 @@
 
 ### Implementation
 - [x] Node CRUD operations
-- [ ] Field CRUD operations
+- [x] Field CRUD operations
 - [ ] Node hierarchy (parent-child)
 - [ ] Field ordering logic
 
 ### Tests
 - [ ] Test: nested node structure builds correctly
 - [ ] Test: node rename works
-- [ ] Test: duplicate field keys allowed
-- [ ] Test: field updates persist
+- [x] Test: duplicate field keys allowed
+- [x] Test: field updates persist
 
 ---
 
