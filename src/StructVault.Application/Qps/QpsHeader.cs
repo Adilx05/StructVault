@@ -42,10 +42,7 @@ public sealed class QpsHeader
         int authenticationTagLength,
         long ciphertextLength)
     {
-        if (version != QpsFileFormat.CurrentVersion)
-        {
-            throw new NotSupportedException($"QPS file version {version} is not supported.");
-        }
+        QpsFileFormat.EnsureSupportedVersion(version);
 
         if (saltLength < QpsFileFormat.MinimumSaltSizeInBytes)
         {

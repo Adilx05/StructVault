@@ -4,6 +4,9 @@ namespace StructVault.Application.Qps;
 
 public static class QpsFileFormat
 {
+    private static readonly byte[] SupportedVersionNumbers = [CurrentVersion];
+    private static readonly QpsFileVersionSupport VersionSupportValue = new(CurrentVersion, SupportedVersionNumbers);
+
     public const byte CurrentVersion = 1;
     public const int HeaderSizeInBytes = 13;
     public const int MinimumSaltSizeInBytes = 16;
@@ -12,9 +15,25 @@ public static class QpsFileFormat
 
     public static ReadOnlySpan<byte> Magic => "QPSV"u8;
 
+    public static QpsFileVersionSupport VersionSupport => VersionSupportValue;
+
     public static bool HasSupportedMagic(ReadOnlySpan<byte> bytes)
     {
         return bytes.Length >= Magic.Length && bytes[..Magic.Length].SequenceEqual(Magic);
+    }
+
+    public static bool IsSupportedVersion(byte version)
+    {
+        return SupportedVersionNumbers.Contains(version);
+    }
+
+    public static void EnsureSupportedVersion(byte version)
+    {
+        if (!IsSupportedVersion(version))
+        {
+            throw new NotSupportedException(
+                $"QPS file version {version} is not supported. Supported version(s): {FormatSupportedVersions()}.");
+        }
     }
 
     internal static QpsHeader ReadHeader(ReadOnlySpan<byte> bytes)
@@ -30,10 +49,7 @@ public static class QpsFileFormat
         }
 
         byte version = bytes[4];
-        if (version != CurrentVersion)
-        {
-            throw new NotSupportedException($"QPS file version {version} is not supported.");
-        }
+        EnsureSupportedVersion(version);
 
         int saltLength = BinaryPrimitives.ReadUInt16BigEndian(bytes[5..7]);
         int initializationVectorLength = bytes[7];
@@ -60,10 +76,14 @@ public static class QpsFileFormat
 
     internal static void WriteHeader(Span<byte> destination, QpsHeader header)
     {
+        ArgumentNullException.ThrowIfNull(header);
+
         if (destination.Length < HeaderSizeInBytes)
         {
             throw new ArgumentException($"Destination must be at least {HeaderSizeInBytes} bytes.", nameof(destination));
         }
+
+        EnsureSupportedVersion(header.Version);
 
         Magic.CopyTo(destination);
         destination[4] = header.Version;
@@ -71,5 +91,10 @@ public static class QpsFileFormat
         destination[7] = checked((byte)header.InitializationVectorLength);
         destination[8] = checked((byte)header.AuthenticationTagLength);
         BinaryPrimitives.WriteUInt32BigEndian(destination[9..13], checked((uint)header.CiphertextLength));
+    }
+
+    private static string FormatSupportedVersions()
+    {
+        return string.Join(", ", SupportedVersionNumbers);
     }
 }

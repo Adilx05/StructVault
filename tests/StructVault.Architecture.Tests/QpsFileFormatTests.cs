@@ -88,11 +88,13 @@ public sealed class QpsFileFormatTests
             await handler.Handle(new ParseQpsVaultFileQuery(fileBytes), CancellationToken.None));
     }
 
-    [Fact]
-    public async Task ParseRejectsUnsupportedVersion()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task ParseRejectsUnsupportedVersion(byte unsupportedVersion)
     {
         byte[] fileBytes = await CreateValidFileBytes();
-        fileBytes[4] = QpsFileFormat.CurrentVersion + 1;
+        fileBytes[4] = unsupportedVersion;
         ParseQpsVaultFileQueryHandler handler = new();
 
         await Assert.ThrowsAsync<NotSupportedException>(async () =>
