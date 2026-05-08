@@ -20,14 +20,14 @@
 
 ### Implementation
 - [x] Implement Argon2id key derivation service
-- [ ] Implement AES-256-GCM encryption service
+- [x] Implement AES-256-GCM encryption service
 - [ ] Design QPS file format (header + salt + iv + encrypted data)
 
 ### Tests
 - [x] Test: same password → same key (with same salt)
 - [x] Test: different password → different key
-- [ ] Test: encryption → decryption returns original data
-- [ ] Test: tampered data → decryption fails
+- [x] Test: encryption → decryption returns original data
+- [x] Test: tampered data → decryption fails
 
 ---
 
