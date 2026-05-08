@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\StructVault.Application\StructVault.Application.csproj" />
     <ProjectReference Include="..\StructVault.Domain\StructVault.Domain.csproj" />
   </ItemGroup>
