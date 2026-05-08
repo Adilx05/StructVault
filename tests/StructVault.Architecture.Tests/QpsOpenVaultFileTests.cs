@@ -101,6 +101,40 @@ public sealed class QpsOpenVaultFileTests
     }
 
     [Fact]
+    public async Task OpenVaultFileFailsSafelyWhenEncryptedPayloadIsCorrupted()
+    {
+        string directoryPath = CreateUniqueTempDirectoryPath();
+        string vaultFilePath = Path.Combine(directoryPath, "corrupted-vault.qps");
+        byte[] plaintextVaultData = Encoding.UTF8.GetBytes(
+            "StructVault QPS corrupted file test payload v1\nnode:Root\nfield:secret=encrypted-only");
+        byte[] key = await DeriveVaultKey(VaultPassword, ValidSalt);
+        AesGcmEncryptionResult encryptionResult = await EncryptVaultData(plaintextVaultData, key);
+        byte[] qpsFileBytes = await CreateQpsVaultFile(encryptionResult);
+        WriteQpsVaultFileCommandHandler writeHandler = new(new FileSystemQpsFileWriter());
+        OpenQpsVaultFileQueryHandler openHandler = new(
+            new FileSystemQpsFileReader(),
+            new Argon2idKeyDerivationService(),
+            new Aes256GcmEncryptionService());
+
+        try
+        {
+            CorruptFirstCiphertextByte(qpsFileBytes, encryptionResult.Nonce.Length);
+            Assert.False(ContainsSequence(qpsFileBytes, plaintextVaultData));
+
+            await writeHandler.Handle(new WriteQpsVaultFileCommand(vaultFilePath, qpsFileBytes), CancellationToken.None);
+
+            await Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () =>
+                await openHandler.Handle(new OpenQpsVaultFileQuery(vaultFilePath, VaultPassword), CancellationToken.None));
+        }
+        finally
+        {
+            ZeroMemory(key);
+            ZeroMemory(plaintextVaultData);
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    [Fact]
     public async Task OpenVaultFileRejectsBlankPathBeforeReading()
     {
         RecordingQpsFileReader reader = new();
@@ -154,6 +188,12 @@ public sealed class QpsOpenVaultFileTests
                 encryptionResult.Ciphertext.ToArray(),
                 encryptionResult.Tag.ToArray()),
             CancellationToken.None);
+    }
+
+    private static void CorruptFirstCiphertextByte(byte[] qpsFileBytes, int initializationVectorLength)
+    {
+        int ciphertextOffset = QpsFileFormat.HeaderSizeInBytes + ValidSalt.Length + initializationVectorLength;
+        qpsFileBytes[ciphertextOffset] ^= 0xFF;
     }
 
     private static bool ContainsSequence(byte[] haystack, byte[] needle)
