@@ -56,6 +56,40 @@ public sealed class VaultNodePersistenceTests
         Assert.Equal("Child", await ExecuteScalarAsync(connection, "SELECT Name FROM VaultNode WHERE Id = 'child';"));
     }
 
+    [Fact]
+    public async Task DeleteVaultNodeCommandHandlerCascadesDeleteToFieldsForDeletedNodeOnly()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultNodeWriter nodeWriter = new();
+        CreateVaultNodeCommandHandler createNodeHandler = new(nodeWriter);
+        DeleteVaultNodeCommandHandler deleteNodeHandler = new(nodeWriter);
+        CreateVaultFieldCommandHandler createFieldHandler = new(new SqliteVaultFieldWriter());
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await createNodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "deleted-node", null, "Deleted", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createNodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "remaining-node", null, "Remaining", 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createFieldHandler.Handle(
+            new CreateVaultFieldCommand(connection, "deleted-field-1", "deleted-node", "username", new byte[] { 1 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createFieldHandler.Handle(
+            new CreateVaultFieldCommand(connection, "deleted-field-2", "deleted-node", "password", new byte[] { 2 }, 1, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createFieldHandler.Handle(
+            new CreateVaultFieldCommand(connection, "remaining-field", "remaining-node", "username", new byte[] { 3 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+
+        await deleteNodeHandler.Handle(new DeleteVaultNodeCommand(connection, " deleted-node "), CancellationToken.None);
+
+        Assert.Equal(0L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM VaultNode WHERE Id = 'deleted-node';"));
+        Assert.Equal(0L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM VaultField WHERE NodeId = 'deleted-node';"));
+        Assert.Equal(1L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM VaultNode WHERE Id = 'remaining-node';"));
+        Assert.Equal(1L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM VaultField WHERE Id = 'remaining-field';"));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -86,6 +120,17 @@ public sealed class VaultNodePersistenceTests
             0,
             CreatedAtUtc,
             UpdatedAtUtc));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void DeleteVaultNodeCommandRejectsMissingNodeId(string? id)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new DeleteVaultNodeCommand(
+            new UnusedDbConnection(),
+            id!));
     }
 
     [Fact]

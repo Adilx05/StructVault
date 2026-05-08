@@ -44,6 +44,23 @@ public sealed class SqliteVaultNodeWriter : IVaultNodeWriter
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task DeleteAsync(DbConnection connection, DeleteVaultNodeCommand node, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SqliteConnection sqliteConnection = RequireOpenSqliteConnection(connection);
+
+        await using SqliteCommand command = sqliteConnection.CreateCommand();
+        command.CommandText = """
+            DELETE FROM VaultNode
+            WHERE Id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", node.Id);
+
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private static SqliteConnection RequireOpenSqliteConnection(DbConnection connection)
     {
         if (connection is null)
