@@ -50,7 +50,7 @@
 ## 🗄️ Phase 4 – Persistence Layer
 
 ### Implementation
-- [ ] Define SQLite schema (VaultNode, VaultField)
+- [x] Define SQLite schema (VaultNode, VaultField)
 - [ ] Setup in-memory SQLite lifecycle
 - [ ] Implement DB serialization/deserialization
 
