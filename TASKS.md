@@ -9,7 +9,7 @@
   - Infrastructure
   - Persistence
   - Desktop (WPF)
-- [ ] Setup WPF project with MahApps.Metro
+- [x] Setup WPF project with MahApps.Metro
 - [ ] Implement MVVM base:
   - ViewModelBase (INotifyPropertyChanged)
   - RelayCommand / AsyncCommand
