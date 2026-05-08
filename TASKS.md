@@ -58,7 +58,7 @@
 - [x] Test: create node → stored correctly
 - [x] Test: create field → linked to node
 - [x] Test: delete node → cascade delete fields
-- [ ] Test: ordering works as expected
+- [x] Test: ordering works as expected
 
 ---
 
