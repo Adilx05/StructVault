@@ -68,7 +68,7 @@
 - [x] Node CRUD operations
 - [x] Field CRUD operations
 - [x] Node hierarchy (parent-child)
-- [ ] Field ordering logic
+- [x] Field ordering logic
 
 ### Tests
 - [x] Test: nested node structure builds correctly

@@ -147,6 +147,61 @@ public sealed class SqliteVaultFieldWriter : IVaultFieldWriter, IVaultFieldReade
         return affectedRows == 1;
     }
 
+    public async Task<bool> ReorderAsync(DbConnection connection, ReorderVaultFieldCommand field, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SqliteConnection sqliteConnection = RequireOpenSqliteConnection(connection);
+
+        await using SqliteTransaction transaction = (SqliteTransaction)await sqliteConnection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        bool transactionCompleted = false;
+        try
+        {
+            string? nodeId = await ReadFieldNodeIdAsync(sqliteConnection, transaction, field.Id, cancellationToken).ConfigureAwait(false);
+            if (nodeId is null)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                transactionCompleted = true;
+                return false;
+            }
+
+            List<string> orderedFieldIds = await ReadOrderedFieldIdsAsync(sqliteConnection, transaction, nodeId, cancellationToken).ConfigureAwait(false);
+            if (!orderedFieldIds.Remove(field.Id))
+            {
+                throw new InvalidOperationException("Vault field reordering could not locate the field within its owning node.");
+            }
+
+            int targetIndex = Math.Min(field.TargetSortOrder, orderedFieldIds.Count);
+            orderedFieldIds.Insert(targetIndex, field.Id);
+
+            for (int sortOrder = 0; sortOrder < orderedFieldIds.Count; sortOrder++)
+            {
+                await UpdateFieldSortOrderAsync(
+                    sqliteConnection,
+                    transaction,
+                    orderedFieldIds[sortOrder],
+                    field.Id,
+                    sortOrder,
+                    field.UpdatedAtUtc,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            transactionCompleted = true;
+            return true;
+        }
+        catch
+        {
+            if (!transactionCompleted)
+            {
+                await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+
+            throw;
+        }
+    }
+
     public async Task DeleteAsync(DbConnection connection, DeleteVaultFieldCommand field, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(field);
@@ -162,6 +217,81 @@ public sealed class SqliteVaultFieldWriter : IVaultFieldWriter, IVaultFieldReade
         command.Parameters.AddWithValue("$id", field.Id);
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<string?> ReadFieldNodeIdAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string fieldId,
+        CancellationToken cancellationToken)
+    {
+        await using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT NodeId
+            FROM VaultField
+            WHERE Id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", fieldId);
+
+        object? nodeId = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        return nodeId is null || nodeId is DBNull ? null : (string)nodeId;
+    }
+
+    private static async Task<List<string>> ReadOrderedFieldIdsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string nodeId,
+        CancellationToken cancellationToken)
+    {
+        await using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT Id
+            FROM VaultField
+            WHERE NodeId = $nodeId
+            ORDER BY SortOrder, Id;
+            """;
+        command.Parameters.AddWithValue("$nodeId", nodeId);
+
+        List<string> fieldIds = new();
+        await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            fieldIds.Add(reader.GetString(0));
+        }
+
+        return fieldIds;
+    }
+
+    private static async Task UpdateFieldSortOrderAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string fieldId,
+        string movedFieldId,
+        int sortOrder,
+        DateTimeOffset updatedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        await using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE VaultField
+            SET SortOrder = $sortOrder,
+                UpdatedAtUtc = $updatedAtUtc
+            WHERE Id = $id
+              AND (SortOrder <> $sortOrder OR Id = $movedFieldId);
+            """;
+        command.Parameters.AddWithValue("$id", fieldId);
+        command.Parameters.AddWithValue("$movedFieldId", movedFieldId);
+        command.Parameters.AddWithValue("$sortOrder", sortOrder);
+        command.Parameters.AddWithValue("$updatedAtUtc", updatedAtUtc.ToString("O"));
+
+        int affectedRows = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        if (affectedRows > 1)
+        {
+            throw new InvalidOperationException("Vault field reordering updated multiple rows for a single field id.");
+        }
     }
 
     private static SqliteConnection RequireOpenSqliteConnection(DbConnection connection)
