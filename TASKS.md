@@ -65,7 +65,7 @@
 ## 🌲 Phase 5 – Core Domain Logic
 
 ### Implementation
-- [ ] Node CRUD operations
+- [x] Node CRUD operations
 - [ ] Field CRUD operations
 - [ ] Node hierarchy (parent-child)
 - [ ] Field ordering logic
