@@ -81,7 +81,7 @@
 ## 🖥️ Phase 6 – UI Core (WPF + MahApps)
 
 ### Implementation
-- [ ] MainWindow layout (Tree + Detail panel)
+- [x] MainWindow layout (Tree + Detail panel)
 - [ ] Bind TreeView to node structure
 - [ ] Implement dynamic field rendering
 - [ ] Context menus for Node and Field
