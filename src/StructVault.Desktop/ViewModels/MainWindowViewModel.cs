@@ -24,6 +24,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private readonly ISender sender;
     private readonly IContextMenuInputService contextMenuInputService;
+    private readonly UiResponsivenessOptions uiResponsivenessOptions;
     private readonly ObservableCollection<VaultTreeNodeViewModel> vaultNodes = new();
     private readonly ObservableCollection<VaultFieldViewModel> selectedFields = new();
     private readonly ObservableCollection<VaultSearchResultViewModel> searchResults = new();
@@ -51,9 +52,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public MainWindowViewModel(ISender sender, IContextMenuInputService contextMenuInputService)
+        : this(sender, contextMenuInputService, new UiResponsivenessOptions())
+    {
+    }
+
+    public MainWindowViewModel(
+        ISender sender,
+        IContextMenuInputService contextMenuInputService,
+        UiResponsivenessOptions uiResponsivenessOptions)
     {
         this.sender = sender ?? throw new ArgumentNullException(nameof(sender));
         this.contextMenuInputService = contextMenuInputService ?? throw new ArgumentNullException(nameof(contextMenuInputService));
+        this.uiResponsivenessOptions = uiResponsivenessOptions ?? throw new ArgumentNullException(nameof(uiResponsivenessOptions));
         readOnlyVaultNodes = new ReadOnlyObservableCollection<VaultTreeNodeViewModel>(vaultNodes);
         readOnlySelectedFields = new ReadOnlyObservableCollection<VaultFieldViewModel>(selectedFields);
         readOnlySearchResults = new ReadOnlyObservableCollection<VaultSearchResultViewModel>(searchResults);
@@ -425,7 +435,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             .Send(new SearchVaultQuery(connection, normalizedSearchText, SelectedSearchFilter), cancellationToken)
             .ConfigureAwait(true);
 
-        ReplaceSearchResults(results);
+        await ReplaceSearchResultsAsync(results, cancellationToken).ConfigureAwait(true);
     }
 
     public async Task SelectSearchResultAsync(VaultSearchResultViewModel? result, CancellationToken cancellationToken = default)
@@ -466,7 +476,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             .Send(new ListVaultFieldsByNodeIdQuery(connection, node.Id), cancellationToken)
             .ConfigureAwait(true);
 
-        ReplaceSelectedFields(fields);
+        await ReplaceSelectedFieldsAsync(fields, cancellationToken).ConfigureAwait(true);
     }
 
     private async Task<bool> UnlockVaultAsync(object? parameter, CancellationToken cancellationToken)
@@ -786,62 +796,90 @@ public sealed class MainWindowViewModel : ViewModelBase
             .Send(new ListVaultNodeHierarchyQuery(connection), cancellationToken)
             .ConfigureAwait(true);
 
-        ReplaceVaultNodes(hierarchy);
+        await ReplaceVaultNodesAsync(hierarchy, cancellationToken).ConfigureAwait(true);
         VaultTreeNodeViewModel? nodeToSelect = nodeIdToSelect is null ? null : FindNodeById(vaultNodes, nodeIdToSelect);
         await SelectVaultNodeAsync(nodeToSelect, cancellationToken).ConfigureAwait(true);
     }
 
-    private void ReplaceVaultNodes(IReadOnlyList<VaultNodeHierarchyRecord> hierarchy)
+    private async Task ReplaceVaultNodesAsync(IReadOnlyList<VaultNodeHierarchyRecord> hierarchy, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(hierarchy);
+        cancellationToken.ThrowIfCancellationRequested();
 
         vaultNodes.Clear();
+        int updatedItems = 0;
         foreach (VaultNodeHierarchyRecord node in hierarchy)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (node is null)
             {
                 throw new ArgumentException("Vault hierarchy cannot contain null root nodes.", nameof(hierarchy));
             }
 
             vaultNodes.Add(new VaultTreeNodeViewModel(node));
+            updatedItems++;
+            await YieldToUiAfterBatchAsync(updatedItems, cancellationToken).ConfigureAwait(true);
         }
     }
 
-    private void ReplaceSearchResults(IReadOnlyList<VaultSearchResultRecord> results)
+    private async Task ReplaceSearchResultsAsync(IReadOnlyList<VaultSearchResultRecord> results, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(results);
+        cancellationToken.ThrowIfCancellationRequested();
 
         searchResults.Clear();
+        int updatedItems = 0;
         foreach (VaultSearchResultRecord result in results)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (result is null)
             {
                 throw new ArgumentException("Vault search results cannot contain null entries.", nameof(results));
             }
 
             searchResults.Add(new VaultSearchResultViewModel(result));
+            updatedItems++;
+            await YieldToUiAfterBatchAsync(updatedItems, cancellationToken).ConfigureAwait(true);
         }
 
         OnPropertyChanged(nameof(HasSearchResults));
         OnPropertyChanged(nameof(SearchStatusText));
     }
 
-    private void ReplaceSelectedFields(IReadOnlyList<VaultFieldRecord> fields)
+    private async Task ReplaceSelectedFieldsAsync(IReadOnlyList<VaultFieldRecord> fields, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(fields);
+        cancellationToken.ThrowIfCancellationRequested();
 
         ClearSelectedFields();
+        int updatedItems = 0;
         foreach (VaultFieldRecord field in fields)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (field is null)
             {
                 throw new ArgumentException("Vault fields cannot contain null entries.", nameof(fields));
             }
 
             selectedFields.Add(new VaultFieldViewModel(field));
+            updatedItems++;
+            await YieldToUiAfterBatchAsync(updatedItems, cancellationToken).ConfigureAwait(true);
         }
 
         OnPropertyChanged(nameof(HasSelectedFields));
+    }
+
+
+    private async Task YieldToUiAfterBatchAsync(int updatedItems, CancellationToken cancellationToken)
+    {
+        if (updatedItems % uiResponsivenessOptions.CollectionUpdateYieldBatchSize != 0)
+        {
+            return;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private void ClearSelectedFields()
