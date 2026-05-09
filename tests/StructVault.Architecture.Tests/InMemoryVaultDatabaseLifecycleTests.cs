@@ -20,6 +20,7 @@ public sealed class InMemoryVaultDatabaseLifecycleTests
         Assert.Equal(ConnectionState.Open, connection.State);
         Assert.Equal(1L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'VaultNode';"));
         Assert.Equal(1L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'VaultField';"));
+        Assert.Equal(1L, await ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'VaultSetting';"));
     }
 
     [Fact]

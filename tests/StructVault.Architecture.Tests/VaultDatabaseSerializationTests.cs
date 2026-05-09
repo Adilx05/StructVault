@@ -30,6 +30,7 @@ public sealed class VaultDatabaseSerializationTests
         Assert.Equal("Root", await ExecuteScalarAsync(restoredConnection, "SELECT Name FROM VaultNode WHERE Id = 'root';"));
         Assert.Equal("Child", await ExecuteScalarAsync(restoredConnection, "SELECT Name FROM VaultNode WHERE Id = 'child';"));
         Assert.Equal(new byte[] { 1, 2, 3 }, await ExecuteBytesAsync(restoredConnection, "SELECT Value FROM VaultField WHERE Id = 'field-1';"));
+        Assert.Equal(1L, await ExecuteScalarAsync(restoredConnection, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'VaultSetting';"));
     }
 
     [Fact]

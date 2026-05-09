@@ -38,6 +38,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private SearchVaultFilter selectedSearchFilter = SearchVaultFilter.All;
     private bool isClipboardAutoClearEnabled = true;
     private TimeSpan clipboardAutoClearDelay = CopyVaultFieldValueToClipboardCommand.DefaultAutoClearDelay;
+    private string clipboardSettingsStatusText = "Clipboard settings use secure defaults.";
     private TimeSpan idleLockTimeout = TimeSpan.FromMinutes(15);
     private bool isVaultLocked;
     private bool isDirty;
@@ -65,6 +66,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         EditFieldCommand = new AsyncCommand(EditFieldAsync, CanMutateField);
         DeleteFieldCommand = new AsyncCommand(DeleteFieldAsync, CanMutateField);
         CopyFieldValueCommand = new AsyncCommand(CopyFieldValueAsync, CanMutateField);
+        ApplyClipboardSettingsCommand = new AsyncCommand(ApplyClipboardSettingsAsync, CanMutateVault);
         UnlockVaultCommand = new AsyncCommand(UnlockVaultAsync, CanUnlockVault);
     }
 
@@ -95,6 +97,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand DeleteFieldCommand { get; }
 
     public ICommand CopyFieldValueCommand { get; }
+
+    public ICommand ApplyClipboardSettingsCommand { get; }
 
     public ICommand UnlockVaultCommand { get; }
 
@@ -137,8 +141,37 @@ public sealed class MainWindowViewModel : ViewModelBase
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Clipboard auto-clear delay must be greater than zero.");
             }
 
-            SetProperty(ref clipboardAutoClearDelay, value);
+            if (value.TotalSeconds > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Clipboard auto-clear delay is too large.");
+            }
+
+            TimeSpan normalizedValue = TimeSpan.FromSeconds((int)value.TotalSeconds);
+            if (SetProperty(ref clipboardAutoClearDelay, normalizedValue))
+            {
+                OnPropertyChanged(nameof(ClipboardAutoClearDelaySeconds));
+            }
         }
+    }
+
+    public int ClipboardAutoClearDelaySeconds
+    {
+        get => (int)ClipboardAutoClearDelay.TotalSeconds;
+        set
+        {
+            if (value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Clipboard auto-clear delay must be greater than zero.");
+            }
+
+            ClipboardAutoClearDelay = TimeSpan.FromSeconds(value);
+        }
+    }
+
+    public string ClipboardSettingsStatusText
+    {
+        get => clipboardSettingsStatusText;
+        private set => SetProperty(ref clipboardSettingsStatusText, value);
     }
 
     public SearchVaultFilter SelectedSearchFilter
@@ -292,6 +325,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         activeConnection = connection;
         IsVaultLocked = false;
+        await LoadClipboardSettingsAsync(cancellationToken).ConfigureAwait(true);
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
         SearchText = string.Empty;
         SelectedSearchFilter = SearchVaultFilter.All;
@@ -587,6 +621,23 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private async Task ApplyClipboardSettingsAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        try
+        {
+            await sender.Send(
+                new SaveClipboardSettingsCommand(connection, IsClipboardAutoClearEnabled, ClipboardAutoClearDelay),
+                cancellationToken).ConfigureAwait(true);
+            ClipboardSettingsStatusText = "Clipboard settings saved. Save the vault file to persist them on disk.";
+            MarkDirty();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            contextMenuInputService.ShowValidationError("Settings failed", "Clipboard settings could not be saved. " + ex.Message);
+        }
+    }
+
     private async Task CopyFieldValueAsync(object? parameter, CancellationToken cancellationToken)
     {
         VaultFieldViewModel field = RequireFieldParameter(parameter);
@@ -605,6 +656,26 @@ public sealed class MainWindowViewModel : ViewModelBase
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             contextMenuInputService.ShowValidationError("Copy failed", "The field value could not be copied. " + ex.Message);
+        }
+    }
+
+    private async Task LoadClipboardSettingsAsync(CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        try
+        {
+            ClipboardSettingsRecord settings = await sender
+                .Send(new GetClipboardSettingsQuery(connection), cancellationToken)
+                .ConfigureAwait(true);
+            IsClipboardAutoClearEnabled = settings.AutoClearEnabled;
+            ClipboardAutoClearDelay = settings.AutoClearDelay;
+            ClipboardSettingsStatusText = "Clipboard settings loaded.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            IsClipboardAutoClearEnabled = ClipboardSettingsRecord.Default.AutoClearEnabled;
+            ClipboardAutoClearDelay = ClipboardSettingsRecord.Default.AutoClearDelay;
+            ClipboardSettingsStatusText = "Clipboard settings reset to secure defaults because saved settings could not be loaded.";
         }
     }
 

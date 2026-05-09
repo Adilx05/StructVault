@@ -152,7 +152,7 @@
 ## ⚙️ Phase 11 – Settings
 
 ### Implementation
-- [ ] Clipboard settings (enable/disable + duration)
+- [x] Clipboard settings (enable/disable + duration)
 - [ ] Idle lock settings (enable/disable + duration)
 
 ### Tests
