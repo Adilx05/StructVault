@@ -138,7 +138,7 @@
 ## 🔒 Phase 10 – Idle Lock
 
 ### Implementation
-- [ ] Track user inactivity
+- [x] Track user inactivity
 - [ ] Lock vault after timeout
 - [ ] Prompt for password to unlock
 

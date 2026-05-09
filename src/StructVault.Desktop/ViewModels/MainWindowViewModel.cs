@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Input;
 using MediatR;
 using StructVault.Application.Clipboard;
+using StructVault.Application.IdleLock;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
@@ -182,6 +183,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public bool CanSave => CanSaveVault(null);
+
+    public Task<DateTimeOffset> RecordUserActivityAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return sender.Send(new RecordUserActivityCommand(), cancellationToken);
+    }
+
+    public Task<IdleActivityState> GetIdleActivityStateAsync(TimeSpan idleTimeout, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return sender.Send(new GetIdleActivityStateQuery(idleTimeout), cancellationToken);
+    }
 
     public async Task<bool> ConfirmExitAsync(CancellationToken cancellationToken = default)
     {
