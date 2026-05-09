@@ -12,11 +12,16 @@ public sealed class CopyVaultFieldValueToClipboardCommandHandler : IRequestHandl
 
     private readonly IVaultFieldReader fieldReader;
     private readonly IClipboardService clipboardService;
+    private readonly IClipboardAutoClearService clipboardAutoClearService;
 
-    public CopyVaultFieldValueToClipboardCommandHandler(IVaultFieldReader fieldReader, IClipboardService clipboardService)
+    public CopyVaultFieldValueToClipboardCommandHandler(
+        IVaultFieldReader fieldReader,
+        IClipboardService clipboardService,
+        IClipboardAutoClearService clipboardAutoClearService)
     {
         this.fieldReader = fieldReader ?? throw new ArgumentNullException(nameof(fieldReader));
         this.clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
+        this.clipboardAutoClearService = clipboardAutoClearService ?? throw new ArgumentNullException(nameof(clipboardAutoClearService));
     }
 
     public async Task Handle(CopyVaultFieldValueToClipboardCommand request, CancellationToken cancellationToken)
@@ -34,6 +39,17 @@ public sealed class CopyVaultFieldValueToClipboardCommandHandler : IRequestHandl
 
         string text = DecodeTextValue(field.Value);
         await clipboardService.SetTextAsync(text, cancellationToken).ConfigureAwait(false);
+
+        if (request.AutoClearEnabled)
+        {
+            await clipboardAutoClearService
+                .ScheduleClearAsync(text, request.AutoClearDelay, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            await clipboardAutoClearService.CancelPendingClearAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private static string DecodeTextValue(byte[] value)

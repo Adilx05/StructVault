@@ -21,10 +21,12 @@ internal sealed class DesktopVaultSender : ISender
     private readonly FileSystemQpsFileBackupService backupService = new();
     private readonly FileSystemQpsFileWriter fileWriter = new();
     private readonly WpfClipboardService clipboardService = new();
+    private readonly ClipboardAutoClearService clipboardAutoClearService;
 
     public DesktopVaultSender()
     {
         databaseSerializer = new SqliteVaultDatabaseSerializer(new SqliteVaultSchemaProvider());
+        clipboardAutoClearService = new ClipboardAutoClearService(clipboardService, new SystemClipboardClearDelay());
     }
 
     public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
@@ -117,7 +119,9 @@ internal sealed class DesktopVaultSender : ISender
                 await new DeleteVaultFieldCommandHandler(fieldStore).Handle(command, cancellationToken).ConfigureAwait(false);
                 break;
             case CopyVaultFieldValueToClipboardCommand command:
-                await new CopyVaultFieldValueToClipboardCommandHandler(fieldStore, clipboardService).Handle(command, cancellationToken).ConfigureAwait(false);
+                await new CopyVaultFieldValueToClipboardCommandHandler(fieldStore, clipboardService, clipboardAutoClearService)
+                    .Handle(command, cancellationToken)
+                    .ConfigureAwait(false);
                 break;
             case SaveQpsVaultFileCommand command:
                 await new SaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, backupService, fileWriter)
