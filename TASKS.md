@@ -89,7 +89,7 @@
 ### Tests (UI / ViewModel level)
 - [x] Test: selecting node updates detail panel
 - [x] Test: adding node updates tree
-- [ ] Test: adding field updates UI model
+- [x] Test: adding field updates UI model
 
 ---
 
