@@ -84,7 +84,7 @@
 - [x] MainWindow layout (Tree + Detail panel)
 - [x] Bind TreeView to node structure
 - [x] Implement dynamic field rendering
-- [ ] Context menus for Node and Field
+- [x] Context menus for Node and Field
 
 ### Tests (UI / ViewModel level)
 - [ ] Test: selecting node updates detail panel
