@@ -165,12 +165,12 @@
 
 ### Implementation
 - [x] Change master password
-- [ ] Re-encrypt vault with new password
+- [x] Re-encrypt vault with new password
 
 ### Tests
-- [ ] Test: old password no longer works
-- [ ] Test: new password opens vault
-- [ ] Test: data integrity preserved
+- [x] Test: old password no longer works
+- [x] Test: new password opens vault
+- [x] Test: data integrity preserved
 
 ---
 
