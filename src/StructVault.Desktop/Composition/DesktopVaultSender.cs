@@ -1,5 +1,6 @@
 using MediatR;
 using StructVault.Application.Clipboard;
+using StructVault.Application.IdleLock;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
 using StructVault.Infrastructure.Security;
@@ -22,6 +23,7 @@ internal sealed class DesktopVaultSender : ISender
     private readonly FileSystemQpsFileWriter fileWriter = new();
     private readonly WpfClipboardService clipboardService = new();
     private readonly ClipboardAutoClearService clipboardAutoClearService;
+    private readonly IdleActivityTracker idleActivityTracker = new();
 
     public DesktopVaultSender()
     {
@@ -91,6 +93,12 @@ internal sealed class DesktopVaultSender : ISender
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
             ReadQpsVaultFileQuery query => await new ReadQpsVaultFileQueryHandler(fileReader)
+                .Handle(query, cancellationToken)
+                .ConfigureAwait(false),
+            RecordUserActivityCommand command => await new RecordUserActivityCommandHandler(idleActivityTracker)
+                .Handle(command, cancellationToken)
+                .ConfigureAwait(false),
+            GetIdleActivityStateQuery query => await new GetIdleActivityStateQueryHandler(idleActivityTracker)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
             _ => throw CreateUnsupportedRequestException(request)
@@ -185,6 +193,10 @@ internal sealed class DesktopVaultSender : ISender
             case GetQpsFileVersionSupportQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case ReadQpsVaultFileQuery query:
+                return await Send(query, cancellationToken).ConfigureAwait(false);
+            case RecordUserActivityCommand command:
+                return await Send(command, cancellationToken).ConfigureAwait(false);
+            case GetIdleActivityStateQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case CreateQpsVaultFileBackupCommand command:
                 await Send(command, cancellationToken).ConfigureAwait(false);

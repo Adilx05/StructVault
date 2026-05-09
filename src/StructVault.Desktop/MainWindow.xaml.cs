@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using MahApps.Metro.Controls;
 using StructVault.Application.Persistence;
 using StructVault.Desktop.Composition;
@@ -10,13 +11,17 @@ namespace StructVault.Desktop;
 
 public partial class MainWindow : MetroWindow
 {
+    private static readonly TimeSpan ActivityReportThrottle = TimeSpan.FromSeconds(1);
+
     private bool closeConfirmed;
     private bool closeConfirmationInProgress;
+    private DateTimeOffset lastActivityReportUtc = DateTimeOffset.MinValue;
 
     public MainWindow()
     {
         InitializeComponent();
         ConfigureDefaultViewModel();
+        ConfigureActivityTracking();
     }
 
     public MainWindow(MainWindowViewModel viewModel)
@@ -24,6 +29,17 @@ public partial class MainWindow : MetroWindow
         InitializeComponent();
         DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         Closing += MainWindowClosing;
+        ConfigureActivityTracking();
+    }
+
+    private void ConfigureActivityTracking()
+    {
+        Loaded += MainWindowLoaded;
+        AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(UserActivityDetected), true);
+        AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(UserActivityDetected), true);
+        AddHandler(Mouse.PreviewMouseWheelEvent, new MouseWheelEventHandler(UserActivityDetected), true);
+        AddHandler(Mouse.PreviewMouseMoveEvent, new MouseEventHandler(UserActivityDetected), true);
+        AddHandler(Stylus.PreviewStylusDownEvent, new StylusDownEventHandler(UserActivityDetected), true);
     }
 
     private void ConfigureDefaultViewModel()
@@ -32,6 +48,33 @@ public partial class MainWindow : MetroWindow
         DataContext = new MainWindowViewModel(sender);
         Closing += MainWindowClosing;
         Loaded += async (_, _) => await LoadInitialVaultAsync(sender).ConfigureAwait(true);
+    }
+
+    private async void MainWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        await ReportUserActivityAsync(force: true).ConfigureAwait(true);
+    }
+
+    private async void UserActivityDetected(object sender, RoutedEventArgs e)
+    {
+        await ReportUserActivityAsync(force: false).ConfigureAwait(true);
+    }
+
+    private async Task ReportUserActivityAsync(bool force)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (!force && now - lastActivityReportUtc < ActivityReportThrottle)
+        {
+            return;
+        }
+
+        lastActivityReportUtc = now;
+        await viewModel.RecordUserActivityAsync().ConfigureAwait(true);
     }
 
     private async Task LoadInitialVaultAsync(DesktopVaultSender sender)
