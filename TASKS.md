@@ -164,7 +164,7 @@
 ## 🔐 Phase 12 – Password Management
 
 ### Implementation
-- [ ] Change master password
+- [x] Change master password
 - [ ] Re-encrypt vault with new password
 
 ### Tests

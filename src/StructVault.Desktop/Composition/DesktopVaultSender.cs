@@ -159,6 +159,11 @@ internal sealed class DesktopVaultSender : ISender
                     .Handle(command, cancellationToken)
                     .ConfigureAwait(false);
                 break;
+            case ChangeQpsVaultMasterPasswordCommand command:
+                await new ChangeQpsVaultMasterPasswordCommandHandler(fileReader, keyDerivationService, encryptionService, backupService, fileWriter)
+                    .Handle(command, cancellationToken)
+                    .ConfigureAwait(false);
+                break;
             case CreateQpsVaultFileBackupCommand command:
                 await new CreateQpsVaultFileBackupCommandHandler(backupService).Handle(command, cancellationToken).ConfigureAwait(false);
                 break;
@@ -239,6 +244,9 @@ internal sealed class DesktopVaultSender : ISender
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
             case RestoreQpsVaultFileBackupCommand command:
+                await Send(command, cancellationToken).ConfigureAwait(false);
+                return null;
+            case ChangeQpsVaultMasterPasswordCommand command:
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
             case IRequest command:
