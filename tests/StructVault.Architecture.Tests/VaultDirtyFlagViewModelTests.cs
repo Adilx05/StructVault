@@ -1,5 +1,6 @@
 using MediatR;
 using StructVault.Application.Persistence;
+using StructVault.Application.Errors;
 using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
 using StructVault.Desktop.ViewModels;
@@ -47,7 +48,7 @@ public sealed class VaultDirtyFlagViewModelTests
         await viewModel.SaveVaultAsync();
 
         Assert.False(viewModel.IsDirty);
-        SaveQpsVaultFileCommand saveCommand = Assert.Single(sender.HandledRequests.OfType<SaveQpsVaultFileCommand>());
+        TrySaveQpsVaultFileCommand saveCommand = Assert.Single(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
         Assert.Same(connection, saveCommand.Connection);
         Assert.Equal("vault.qps", saveCommand.FilePath);
         Assert.Equal("correct horse battery staple", saveCommand.Password);
@@ -120,10 +121,12 @@ public sealed class VaultDirtyFlagViewModelTests
         await viewModel.LoadVaultTreeAsync(connection, "vault.qps", "correct horse battery staple");
         await ((AsyncCommand)viewModel.AddRootNodeCommand).ExecuteAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await viewModel.SaveVaultAsync());
+        await viewModel.SaveVaultAsync();
 
         Assert.True(viewModel.IsDirty);
-        Assert.Single(sender.HandledRequests.OfType<SaveQpsVaultFileCommand>());
+        Assert.True(viewModel.HasVaultError);
+        Assert.Contains("configured test save operation failed", viewModel.VaultErrorMessage, StringComparison.Ordinal);
+        Assert.Single(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
     }
 
     private sealed class RecordingContextMenuInputService : IContextMenuInputService
@@ -196,6 +199,11 @@ public sealed class VaultDirtyFlagViewModelTests
                 UpdateVaultFieldCommand command => await new UpdateVaultFieldCommandHandler(fieldWriter)
                     .Handle(command, cancellationToken)
                     .ConfigureAwait(false),
+                TrySaveQpsVaultFileCommand => ThrowOnSave
+                    ? VaultOperationResult.Failure(new VaultOperationError(
+                        VaultOperationErrorCode.FileAccessFailed,
+                        "The configured test save operation failed."))
+                    : VaultOperationResult.Success(),
                 _ => throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.")
             };
 
@@ -260,9 +268,8 @@ public sealed class VaultDirtyFlagViewModelTests
                 case DeleteVaultFieldCommand command:
                     await Send(command, cancellationToken).ConfigureAwait(false);
                     return null;
-                case SaveQpsVaultFileCommand command:
-                    await Send(command, cancellationToken).ConfigureAwait(false);
-                    return null;
+                case TrySaveQpsVaultFileCommand command:
+                    return await Send<VaultOperationResult>(command, cancellationToken).ConfigureAwait(false);
                 default:
                     throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.");
             }
