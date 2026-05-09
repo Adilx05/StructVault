@@ -72,7 +72,7 @@
 
 ### Tests
 - [x] Test: nested node structure builds correctly
-- [ ] Test: node rename works
+- [x] Test: node rename works
 - [x] Test: duplicate field keys allowed
 - [x] Test: field updates persist
 
