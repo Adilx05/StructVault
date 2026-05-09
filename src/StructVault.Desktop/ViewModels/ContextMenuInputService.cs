@@ -82,7 +82,7 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         layout.Children.Add(buttons);
 
         dialog.Content = layout;
-        Window? owner = Application.Current?.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
+        Window? owner = global::System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
         if (owner is not null && !ReferenceEquals(owner, dialog))
         {
             dialog.Owner = owner;
