@@ -45,6 +45,9 @@
                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
                 <Border.ContextMenu>
                     <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Command="{Binding CopyFieldValueCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  Header="Copy field value" />
                         <MenuItem Command="{Binding EditFieldCommand}"
                                   CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Edit field" />
