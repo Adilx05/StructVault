@@ -186,6 +186,54 @@ public sealed class VaultNodePersistenceTests
     }
 
     [Fact]
+    public async Task UpdateVaultNodeCommandHandlerRenamesNodeWithoutChangingIdentityHierarchyOrFields()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
+        SqliteVaultNodeWriter nodeStore = new();
+        SqliteVaultFieldWriter fieldStore = new();
+        CreateVaultNodeCommandHandler createNodeHandler = new(nodeStore);
+        UpdateVaultNodeCommandHandler updateNodeHandler = new(nodeStore);
+        GetVaultNodeByIdQueryHandler getNodeHandler = new(nodeStore);
+        CreateVaultFieldCommandHandler createFieldHandler = new(fieldStore);
+        GetVaultFieldByIdQueryHandler getFieldHandler = new(fieldStore);
+
+        await using DbConnection connection = await factory.CreateOpenConnectionAsync(CancellationToken.None);
+        await createNodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "root", null, "Root", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createNodeHandler.Handle(
+            new CreateVaultNodeCommand(connection, "child", "root", "Child", 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+        await createFieldHandler.Handle(
+            new CreateVaultFieldCommand(connection, "root-field", "root", "username", new byte[] { 1, 2, 3 }, 0, CreatedAtUtc, CreatedAtUtc),
+            CancellationToken.None);
+
+        bool updated = await updateNodeHandler.Handle(
+            new UpdateVaultNodeCommand(connection, " root ", " Renamed Root ", 3, UpdatedAtUtc),
+            CancellationToken.None);
+        VaultNodeRecord? renamedRoot = await getNodeHandler.Handle(new GetVaultNodeByIdQuery(connection, "root"), CancellationToken.None);
+        VaultNodeRecord? child = await getNodeHandler.Handle(new GetVaultNodeByIdQuery(connection, "child"), CancellationToken.None);
+        VaultFieldRecord? linkedField = await getFieldHandler.Handle(new GetVaultFieldByIdQuery(connection, "root-field"), CancellationToken.None);
+
+        Assert.True(updated);
+        Assert.NotNull(renamedRoot);
+        Assert.Equal("root", renamedRoot.Id);
+        Assert.Null(renamedRoot.ParentNodeId);
+        Assert.Equal("Renamed Root", renamedRoot.Name);
+        Assert.Equal(3, renamedRoot.SortOrder);
+        Assert.Equal(CreatedAtUtc, renamedRoot.CreatedAtUtc);
+        Assert.Equal(UpdatedAtUtc, renamedRoot.UpdatedAtUtc);
+
+        Assert.NotNull(child);
+        Assert.Equal("root", child.ParentNodeId);
+        Assert.Equal("Child", child.Name);
+
+        Assert.NotNull(linkedField);
+        Assert.Equal("root", linkedField.NodeId);
+        Assert.Equal("username", linkedField.Key);
+    }
+
+    [Fact]
     public async Task UpdateVaultNodeCommandHandlerReturnsFalseForMissingNode()
     {
         SqliteInMemoryVaultDatabaseConnectionFactory factory = new(new SqliteVaultSchemaProvider());
