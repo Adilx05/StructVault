@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Data.Sqlite;
 using StructVault.Application.Persistence;
+using StructVault.Application.Errors;
 using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
 using StructVault.Desktop.ViewModels;
@@ -49,7 +50,7 @@ public sealed class VaultExitPromptViewModelTests
         Assert.False(shouldExit);
         Assert.True(viewModel.IsDirty);
         Assert.Single(inputService.PromptCanSaveValues, value => value);
-        Assert.Empty(sender.HandledRequests.OfType<SaveQpsVaultFileCommand>());
+        Assert.Empty(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public sealed class VaultExitPromptViewModelTests
         Assert.True(shouldExit);
         Assert.True(viewModel.IsDirty);
         Assert.Single(inputService.PromptCanSaveValues, value => !value);
-        Assert.Empty(sender.HandledRequests.OfType<SaveQpsVaultFileCommand>());
+        Assert.Empty(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public sealed class VaultExitPromptViewModelTests
 
         Assert.True(shouldExit);
         Assert.False(viewModel.IsDirty);
-        SaveQpsVaultFileCommand command = Assert.Single(sender.HandledRequests.OfType<SaveQpsVaultFileCommand>());
+        TrySaveQpsVaultFileCommand command = Assert.Single(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
         Assert.Same(connection, command.Connection);
         Assert.Equal("vault.qps", command.FilePath);
         Assert.Equal("save-password", command.Password);
@@ -120,7 +121,7 @@ public sealed class VaultExitPromptViewModelTests
         Assert.False(shouldExit);
         Assert.True(viewModel.IsDirty);
         Assert.Equal("Save failed", inputService.LastValidationTitle);
-        Assert.Single(sender.HandledRequests.OfType<SaveQpsVaultFileCommand>());
+        Assert.Single(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
     }
 
     private static async Task<SqliteConnection> OpenVaultConnectionAsync()
@@ -200,6 +201,9 @@ public sealed class VaultExitPromptViewModelTests
                 ListVaultFieldsByNodeIdQuery query => await new ListVaultFieldsByNodeIdQueryHandler(fieldWriter)
                     .Handle(query, cancellationToken)
                     .ConfigureAwait(false),
+                TrySaveQpsVaultFileCommand => ThrowOnSave
+                    ? VaultOperationResult.Failure(new VaultOperationError(VaultOperationErrorCode.FileAccessFailed, "The vault could not be saved because the vault file could not be written."))
+                    : VaultOperationResult.Success(),
                 _ => throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.")
             };
 
@@ -217,12 +221,7 @@ public sealed class VaultExitPromptViewModelTests
                 case CreateVaultNodeCommand command:
                     await new CreateVaultNodeCommandHandler(nodeWriter).Handle(command, cancellationToken).ConfigureAwait(false);
                     break;
-                case SaveQpsVaultFileCommand:
-                    if (ThrowOnSave)
-                    {
-                        throw new InvalidOperationException("The configured test save operation failed.");
-                    }
-
+                case TrySaveQpsVaultFileCommand:
                     break;
                 default:
                     throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.");
@@ -242,7 +241,7 @@ public sealed class VaultExitPromptViewModelTests
                 case CreateVaultNodeCommand command:
                     await Send(command, cancellationToken).ConfigureAwait(false);
                     return null;
-                case SaveQpsVaultFileCommand command:
+                case TrySaveQpsVaultFileCommand command:
                     await Send(command, cancellationToken).ConfigureAwait(false);
                     return null;
                 default:

@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Input;
 using MediatR;
 using StructVault.Application.Clipboard;
+using StructVault.Application.Errors;
 using StructVault.Application.IdleLock;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
@@ -43,6 +44,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool isIdleLockEnabled = true;
     private TimeSpan idleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
     private string idleLockSettingsStatusText = "Idle lock settings use secure defaults.";
+    private string vaultErrorMessage = string.Empty;
     private bool isVaultLocked;
     private bool isDirty;
 
@@ -297,6 +299,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public string VaultErrorMessage
+    {
+        get => vaultErrorMessage;
+        private set
+        {
+            string normalizedValue = value?.Trim() ?? string.Empty;
+            if (SetProperty(ref vaultErrorMessage, normalizedValue))
+            {
+                OnPropertyChanged(nameof(HasVaultError));
+            }
+        }
+    }
+
+    public bool HasVaultError => VaultErrorMessage.Length > 0;
+
     public bool CanSave => CanSaveVault(null);
 
     public bool CanUnlock => CanUnlockVault(null);
@@ -379,6 +396,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         cancellationToken.ThrowIfCancellationRequested();
 
         activeConnection = connection;
+        ClearVaultError();
         IsVaultLocked = false;
         await LoadClipboardSettingsAsync(cancellationToken).ConfigureAwait(true);
         await LoadIdleLockSettingsAsync(cancellationToken).ConfigureAwait(true);
@@ -410,6 +428,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         activeVaultFilePath = vaultFilePath;
         activeVaultPassword = password;
+        ClearVaultError();
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(CanUnlock));
     }
@@ -533,11 +552,17 @@ public sealed class MainWindowViewModel : ViewModelBase
         try
         {
             await SaveVaultAsync(null, cancellationToken).ConfigureAwait(true);
+            if (IsDirty && HasVaultError)
+            {
+                contextMenuInputService.ShowValidationError("Save failed", VaultErrorMessage);
+            }
+
             return !IsDirty;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            contextMenuInputService.ShowValidationError("Save failed", "The vault could not be saved, so StructVault will remain open. " + ex.Message);
+            SetVaultError("The vault could not be saved, so StructVault will remain open.");
+            contextMenuInputService.ShowValidationError("Save failed", VaultErrorMessage);
             return false;
         }
     }
@@ -550,9 +575,17 @@ public sealed class MainWindowViewModel : ViewModelBase
             throw new InvalidOperationException("A vault file path and password must be configured before manual save.");
         }
 
-        await sender.Send(
-            new SaveQpsVaultFileCommand(connection, activeVaultFilePath, activeVaultPassword),
+        VaultOperationResult result = await sender.Send(
+            new TrySaveQpsVaultFileCommand(connection, activeVaultFilePath, activeVaultPassword),
             cancellationToken).ConfigureAwait(true);
+
+        if (result.IsFailure)
+        {
+            SetVaultError(result.Error!.Message);
+            return;
+        }
+
+        ClearVaultError();
         SetClean();
     }
 
@@ -893,6 +926,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         searchResults.Clear();
         OnPropertyChanged(nameof(HasSearchResults));
         OnPropertyChanged(nameof(SearchStatusText));
+    }
+
+    private void SetVaultError(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            throw new ArgumentException("A vault error message is required.", nameof(message));
+        }
+
+        VaultErrorMessage = message;
+    }
+
+    private void ClearVaultError()
+    {
+        VaultErrorMessage = string.Empty;
     }
 
     private void LockVault()
