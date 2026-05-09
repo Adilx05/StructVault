@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Data.Sqlite;
 using StructVault.Application.Persistence;
+using StructVault.Application.Errors;
 using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
 using StructVault.Desktop.ViewModels;
@@ -25,7 +26,7 @@ public sealed class VaultManualSaveViewModelTests
 
         await ((AsyncCommand)viewModel.SaveVaultCommand).ExecuteAsync();
 
-        SaveQpsVaultFileCommand command = Assert.Single(sender.Requests.OfType<SaveQpsVaultFileCommand>());
+        TrySaveQpsVaultFileCommand command = Assert.Single(sender.Requests.OfType<TrySaveQpsVaultFileCommand>());
         Assert.Same(connection, command.Connection);
         Assert.Equal("vault.qps", command.FilePath);
         Assert.Equal("save-password", command.Password);
@@ -45,6 +46,29 @@ public sealed class VaultManualSaveViewModelTests
         Assert.False(viewModel.SaveVaultCommand.CanExecute(null));
     }
 
+
+    [Fact]
+    public async Task SaveCommandShowsVaultErrorWhenSafeSaveFails()
+    {
+        RecordingSender sender = new()
+        {
+            SaveResult = VaultOperationResult.Failure(new VaultOperationError(
+                VaultOperationErrorCode.FileAccessFailed,
+                "The vault could not be saved because the vault file could not be written."))
+        };
+        MainWindowViewModel viewModel = new(sender);
+        await using SqliteConnection connection = new("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await viewModel.LoadVaultTreeAsync(connection, "vault.qps", "save-password");
+
+        await ((AsyncCommand)viewModel.SaveVaultCommand).ExecuteAsync();
+
+        Assert.True(viewModel.HasVaultError);
+        Assert.Contains("could not be saved", viewModel.VaultErrorMessage, StringComparison.Ordinal);
+        Assert.Single(sender.Requests.OfType<TrySaveQpsVaultFileCommand>());
+    }
+
     [Fact]
     public void ConfigureManualSaveTargetRejectsBlankPassword()
     {
@@ -57,16 +81,19 @@ public sealed class VaultManualSaveViewModelTests
     {
         public List<object> Requests { get; } = new();
 
+        public VaultOperationResult SaveResult { get; init; } = VaultOperationResult.Success();
+
         public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
             Requests.Add(request);
-            if (request is ListVaultNodeHierarchyQuery)
+            object? response = request switch
             {
-                object response = Array.Empty<VaultNodeHierarchyRecord>();
-                return Task.FromResult((TResponse)response);
-            }
+                ListVaultNodeHierarchyQuery => Array.Empty<VaultNodeHierarchyRecord>(),
+                TrySaveQpsVaultFileCommand => SaveResult,
+                _ => throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.")
+            };
 
-            throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.");
+            return Task.FromResult((TResponse)response);
         }
 
         public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default)

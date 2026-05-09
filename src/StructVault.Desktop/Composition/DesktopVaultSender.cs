@@ -102,6 +102,9 @@ internal sealed class DesktopVaultSender : ISender
             ReadQpsVaultFileQuery query => await new ReadQpsVaultFileQueryHandler(fileReader)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
+            TrySaveQpsVaultFileCommand command => await new TrySaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, backupService, fileWriter)
+                .Handle(command, cancellationToken)
+                .ConfigureAwait(false),
             RecordUserActivityCommand command => await new RecordUserActivityCommandHandler(idleActivityTracker)
                 .Handle(command, cancellationToken)
                 .ConfigureAwait(false),
@@ -232,6 +235,8 @@ internal sealed class DesktopVaultSender : ISender
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case ReadQpsVaultFileQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
+            case TrySaveQpsVaultFileCommand command:
+                return await Send(command, cancellationToken).ConfigureAwait(false);
             case RecordUserActivityCommand command:
                 return await Send(command, cancellationToken).ConfigureAwait(false);
             case GetIdleActivityStateQuery query:

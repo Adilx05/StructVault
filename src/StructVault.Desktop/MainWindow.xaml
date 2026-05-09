@@ -79,6 +79,7 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -102,7 +103,29 @@
                        TextWrapping="NoWrap" />
         </DockPanel>
 
-        <Grid Grid.Row="1">
+        <Border Grid.Row="1"
+                Margin="0,0,0,12"
+                Padding="10"
+                Background="#FFFFF4E5"
+                BorderBrush="#FFFFB74D"
+                BorderThickness="1"
+                CornerRadius="4">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasVaultError}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Foreground="#FF5D4037"
+                       Text="{Binding VaultErrorMessage}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"
                                   MinWidth="240" />
