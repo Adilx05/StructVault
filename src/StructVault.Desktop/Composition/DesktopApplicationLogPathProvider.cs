@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace StructVault.Desktop.Composition;
 
 internal static class DesktopApplicationLogPathProvider
