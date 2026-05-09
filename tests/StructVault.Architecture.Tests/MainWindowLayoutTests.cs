@@ -47,6 +47,21 @@ public sealed class MainWindowLayoutTests
     }
 
     [Fact]
+    public void MainWindowBindsVaultTreeToNodeHierarchy()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+
+        XElement vaultTreeView = Assert.Single(mainWindow.Descendants(PresentationNamespace + "TreeView"));
+        XElement template = Assert.Single(mainWindow.Descendants(PresentationNamespace + "HierarchicalDataTemplate"));
+        XElement templateText = Assert.Single(template.Descendants(PresentationNamespace + "TextBlock"));
+
+        Assert.Equal("{Binding VaultNodes}", (string?)vaultTreeView.Attribute("ItemsSource"));
+        Assert.Equal("{Binding Children}", (string?)template.Attribute("ItemsSource"));
+        Assert.Equal("{x:Type viewModels:VaultTreeNodeViewModel}", (string?)template.Attribute("DataType"));
+        Assert.Equal("{Binding Name}", (string?)templateText.Attribute("Text"));
+    }
+
+    [Fact]
     public void MainWindowProvidesResizableWorkspaceSplitter()
     {
         XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
