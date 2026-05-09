@@ -40,6 +40,44 @@ public sealed class VaultDynamicFieldRenderingViewModelTests
     }
 
     [Fact]
+    public async Task SelectingDifferentNodeReplacesDetailPanelState()
+    {
+        DateTimeOffset timestamp = DateTimeOffset.UtcNow;
+        VaultNodeHierarchyRecord infrastructure = CreateNode("node-infrastructure", "Infrastructure", timestamp);
+        VaultNodeHierarchyRecord operations = CreateNode("node-operations", "Operations", timestamp);
+        RecordingSender sender = new([infrastructure, operations])
+        {
+            FieldsByNodeId =
+            {
+                ["node-infrastructure"] = new[] { CreateField("field-host", "node-infrastructure", "Host", "localhost", 0, timestamp) },
+                ["node-operations"] = new[]
+                {
+                    CreateField("field-runbook", "node-operations", "Runbook", "restart-service", 0, timestamp),
+                    CreateField("field-owner", "node-operations", "Owner", "platform", 1, timestamp)
+                }
+            }
+        };
+        MainWindowViewModel viewModel = new(sender);
+        await using SqliteConnection connection = new("Data Source=:memory:");
+        await connection.OpenAsync();
+        await viewModel.LoadVaultTreeAsync(connection);
+
+        await viewModel.SelectVaultNodeAsync(viewModel.VaultNodes[0]);
+        await viewModel.SelectVaultNodeAsync(viewModel.VaultNodes[1]);
+
+        ListVaultFieldsByNodeIdQuery query = Assert.IsType<ListVaultFieldsByNodeIdQuery>(sender.LastRequest);
+        Assert.Same(connection, query.Connection);
+        Assert.Equal("node-operations", query.NodeId);
+        Assert.Same(viewModel.VaultNodes[1], viewModel.SelectedNode);
+        Assert.Equal("Operations", viewModel.SelectedNodeName);
+        Assert.True(viewModel.HasSelectedNode);
+        Assert.True(viewModel.HasSelectedFields);
+        Assert.Equal(new[] { "Runbook", "Owner" }, viewModel.SelectedFields.Select(field => field.Key).ToArray());
+        Assert.Equal(new[] { "restart-service", "platform" }, viewModel.SelectedFields.Select(field => field.DisplayValue).ToArray());
+        Assert.DoesNotContain(viewModel.SelectedFields, field => field.Key == "Host");
+    }
+
+    [Fact]
     public async Task SelectingNodeWithoutFieldsKeepsDetailCollectionEmpty()
     {
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;

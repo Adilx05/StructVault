@@ -87,7 +87,7 @@
 - [x] Context menus for Node and Field
 
 ### Tests (UI / ViewModel level)
-- [ ] Test: selecting node updates detail panel
+- [x] Test: selecting node updates detail panel
 - [ ] Test: adding node updates tree
 - [ ] Test: adding field updates UI model
 
