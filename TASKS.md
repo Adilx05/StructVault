@@ -82,7 +82,7 @@
 
 ### Implementation
 - [x] MainWindow layout (Tree + Detail panel)
-- [ ] Bind TreeView to node structure
+- [x] Bind TreeView to node structure
 - [ ] Implement dynamic field rendering
 - [ ] Context menus for Node and Field
 
