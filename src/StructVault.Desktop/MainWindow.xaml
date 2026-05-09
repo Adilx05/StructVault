@@ -14,7 +14,26 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <HierarchicalDataTemplate DataType="{x:Type viewModels:VaultTreeNodeViewModel}"
                                   ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Name}" />
+            <TextBlock Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                       Text="{Binding Name}">
+                <TextBlock.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="{Binding PlacementTarget.Tag.AddChildNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding}"
+                                  Header="Add child node" />
+                        <MenuItem Command="{Binding PlacementTarget.Tag.RenameNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding}"
+                                  Header="Rename node" />
+                        <MenuItem Command="{Binding PlacementTarget.Tag.AddFieldCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding}"
+                                  Header="Add field" />
+                        <Separator />
+                        <MenuItem Command="{Binding PlacementTarget.Tag.DeleteNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding}"
+                                  Header="Delete node" />
+                    </ContextMenu>
+                </TextBlock.ContextMenu>
+            </TextBlock>
         </HierarchicalDataTemplate>
         <DataTemplate DataType="{x:Type viewModels:VaultFieldViewModel}">
             <Border Margin="0,0,0,10"
@@ -22,7 +41,18 @@
                     Background="White"
                     BorderBrush="#FFE1E1E1"
                     BorderThickness="1"
-                    CornerRadius="4">
+                    CornerRadius="4"
+                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                <Border.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="{Binding PlacementTarget.Tag.EditFieldCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding}"
+                                  Header="Edit field" />
+                        <MenuItem Command="{Binding PlacementTarget.Tag.DeleteFieldCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding}"
+                                  Header="Delete field" />
+                    </ContextMenu>
+                </Border.ContextMenu>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -98,7 +128,15 @@
                               SelectedItemChanged="VaultTreeView_SelectedItemChanged"
                               ScrollViewer.CanContentScroll="True"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              Tag="{Binding}">
+                        <TreeView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="{Binding PlacementTarget.Tag.AddRootNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          Header="Add root node" />
+                            </ContextMenu>
+                        </TreeView.ContextMenu>
+                    </TreeView>
                 </Grid>
             </Border>
 
