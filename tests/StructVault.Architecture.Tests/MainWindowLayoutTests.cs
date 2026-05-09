@@ -82,6 +82,36 @@ public sealed class MainWindowLayoutTests
     }
 
     [Fact]
+    public void MainWindowContextMenusBindCommandsThroughPlacementTargets()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+
+        XElement treeContextMenu = Assert.Single(mainWindow
+            .Descendants(PresentationNamespace + "TreeView.ContextMenu")
+            .Elements(PresentationNamespace + "ContextMenu"));
+        XElement addRootNode = Assert.Single(treeContextMenu
+            .Elements(PresentationNamespace + "MenuItem")
+            .Where(element => (string?)element.Attribute("Header") == "Add root node"));
+
+        Assert.Equal("{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}",
+            (string?)treeContextMenu.Attribute("DataContext"));
+        Assert.Equal("{Binding AddRootNodeCommand}", (string?)addRootNode.Attribute("Command"));
+
+        XElement nodeContextMenu = Assert.Single(mainWindow
+            .Descendants(PresentationNamespace + "TextBlock.ContextMenu")
+            .Elements(PresentationNamespace + "ContextMenu"));
+        XElement addChildNode = Assert.Single(nodeContextMenu
+            .Elements(PresentationNamespace + "MenuItem")
+            .Where(element => (string?)element.Attribute("Header") == "Add child node"));
+
+        Assert.Equal("{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}",
+            (string?)nodeContextMenu.Attribute("DataContext"));
+        Assert.Equal("{Binding AddChildNodeCommand}", (string?)addChildNode.Attribute("Command"));
+        Assert.Equal("{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}",
+            (string?)addChildNode.Attribute("CommandParameter"));
+    }
+
+    [Fact]
     public void MainWindowNotifiesViewModelWhenTreeSelectionChanges()
     {
         XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
