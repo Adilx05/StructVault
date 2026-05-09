@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using MahApps.Metro.Controls;
+using StructVault.Application.Abstractions.Logging;
+using StructVault.Application.Logging;
 using StructVault.Application.Persistence;
 using StructVault.Desktop.Composition;
 using StructVault.Desktop.ViewModels;
@@ -116,10 +118,38 @@ public partial class MainWindow : MetroWindow
             return;
         }
 
-        System.Data.Common.DbConnection connection = await sender
-            .Send(new CreateInMemoryVaultDatabaseCommand(), CancellationToken.None)
-            .ConfigureAwait(true);
-        await viewModel.LoadVaultTreeAsync(connection).ConfigureAwait(true);
+        try
+        {
+            System.Data.Common.DbConnection connection = await sender
+                .Send(new CreateInMemoryVaultDatabaseCommand(), CancellationToken.None)
+                .ConfigureAwait(true);
+            await viewModel.LoadVaultTreeAsync(connection).ConfigureAwait(true);
+            await WriteOperationalLogAsync(sender, ApplicationLogLevel.Information, "Desktop", "InitialVaultLoaded", null)
+                .ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await WriteOperationalLogAsync(sender, ApplicationLogLevel.Error, "Desktop", "InitialVaultLoadFailed", ex.GetType().FullName)
+                .ConfigureAwait(true);
+            throw;
+        }
+    }
+
+    private static async Task WriteOperationalLogAsync(
+        DesktopVaultSender sender,
+        ApplicationLogLevel level,
+        string category,
+        string eventName,
+        string? detail)
+    {
+        try
+        {
+            await sender.Send(new WriteApplicationLogCommand(level, category, eventName, detail), CancellationToken.None)
+                .ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+        }
     }
 
     private async void MainWindowClosing(object? sender, CancelEventArgs e)

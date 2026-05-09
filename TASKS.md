@@ -179,7 +179,7 @@
 - [x] Improve UI responsiveness
 - [x] Improve error handling
 - [x] Add loading states
-- [ ] Add basic logging
+- [x] Add basic logging
 
 ---
 

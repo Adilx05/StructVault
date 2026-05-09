@@ -1,8 +1,10 @@
 using MediatR;
 using StructVault.Application.Clipboard;
 using StructVault.Application.IdleLock;
+using StructVault.Application.Logging;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
+using StructVault.Infrastructure.Logging;
 using StructVault.Infrastructure.Security;
 using StructVault.Infrastructure.Storage;
 using StructVault.Desktop.Services;
@@ -25,11 +27,18 @@ internal sealed class DesktopVaultSender : ISender
     private readonly WpfClipboardService clipboardService = new();
     private readonly ClipboardAutoClearService clipboardAutoClearService;
     private readonly IdleActivityTracker idleActivityTracker = new();
+    private readonly FileSystemApplicationLogWriter logWriter;
 
     public DesktopVaultSender()
+        : this(DesktopApplicationLogPathProvider.GetDefaultLogFilePath())
+    {
+    }
+
+    public DesktopVaultSender(string logFilePath)
     {
         databaseSerializer = new SqliteVaultDatabaseSerializer(new SqliteVaultSchemaProvider());
         clipboardAutoClearService = new ClipboardAutoClearService(clipboardService, new SystemClipboardClearDelay());
+        logWriter = new FileSystemApplicationLogWriter(logFilePath);
     }
 
     public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
@@ -176,6 +185,9 @@ internal sealed class DesktopVaultSender : ISender
             case WriteQpsVaultFileCommand command:
                 await new WriteQpsVaultFileCommandHandler(fileWriter).Handle(command, cancellationToken).ConfigureAwait(false);
                 break;
+            case WriteApplicationLogCommand command:
+                await new WriteApplicationLogCommandHandler(logWriter).Handle(command, cancellationToken).ConfigureAwait(false);
+                break;
             default:
                 throw CreateUnsupportedRequestException(request);
         }
@@ -252,6 +264,9 @@ internal sealed class DesktopVaultSender : ISender
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
             case ChangeQpsVaultMasterPasswordCommand command:
+                await Send(command, cancellationToken).ConfigureAwait(false);
+                return null;
+            case WriteApplicationLogCommand command:
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
             case IRequest command:
