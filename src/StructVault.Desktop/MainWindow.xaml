@@ -132,6 +132,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -238,8 +239,49 @@
                         </StackPanel>
                     </Border>
 
+                    <Border Grid.Row="3"
+                            Margin="0,0,0,10"
+                            Padding="10"
+                            Background="White"
+                            BorderBrush="#FFE1E1E1"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Idle lock settings" />
+                            <CheckBox Margin="0,8,0,0"
+                                      Content="Lock vault after inactivity"
+                                      IsChecked="{Binding IsIdleLockEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <DockPanel Margin="0,8,0,0"
+                                       LastChildFill="True">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Text="Lock after" />
+                                <TextBlock DockPanel.Dock="Right"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Text="seconds" />
+                                <mah:NumericUpDown Minimum="1"
+                                                   Interval="1"
+                                                   NumericInputMode="Numbers"
+                                                   Value="{Binding IdleLockTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   ToolTip="Positive whole seconds before StructVault locks the open encrypted vault" />
+                            </DockPanel>
+                            <Button Margin="0,8,0,0"
+                                    Padding="10,4"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding ApplyIdleLockSettingsCommand}"
+                                    Content="Apply idle lock" />
+                            <TextBlock Margin="0,6,0,0"
+                                       Foreground="#FF666666"
+                                       Text="{Binding IdleLockSettingsStatusText}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
                     <TreeView x:Name="VaultTreeView"
-                              Grid.Row="3"
+                              Grid.Row="4"
                               ItemsSource="{Binding VaultNodes}"
                               BorderThickness="0"
                               SelectedItemChanged="VaultTreeView_SelectedItemChanged"

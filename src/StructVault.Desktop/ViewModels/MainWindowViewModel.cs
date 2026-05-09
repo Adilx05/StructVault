@@ -39,7 +39,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool isClipboardAutoClearEnabled = true;
     private TimeSpan clipboardAutoClearDelay = CopyVaultFieldValueToClipboardCommand.DefaultAutoClearDelay;
     private string clipboardSettingsStatusText = "Clipboard settings use secure defaults.";
-    private TimeSpan idleLockTimeout = TimeSpan.FromMinutes(15);
+    private bool isIdleLockEnabled = true;
+    private TimeSpan idleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
+    private string idleLockSettingsStatusText = "Idle lock settings use secure defaults.";
     private bool isVaultLocked;
     private bool isDirty;
 
@@ -67,6 +69,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         DeleteFieldCommand = new AsyncCommand(DeleteFieldAsync, CanMutateField);
         CopyFieldValueCommand = new AsyncCommand(CopyFieldValueAsync, CanMutateField);
         ApplyClipboardSettingsCommand = new AsyncCommand(ApplyClipboardSettingsAsync, CanMutateVault);
+        ApplyIdleLockSettingsCommand = new AsyncCommand(ApplyIdleLockSettingsAsync, CanMutateVault);
         UnlockVaultCommand = new AsyncCommand(UnlockVaultAsync, CanUnlockVault);
     }
 
@@ -99,6 +102,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand CopyFieldValueCommand { get; }
 
     public ICommand ApplyClipboardSettingsCommand { get; }
+
+    public ICommand ApplyIdleLockSettingsCommand { get; }
 
     public ICommand UnlockVaultCommand { get; }
 
@@ -220,6 +225,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref isDirty, value);
     }
 
+    public bool IsIdleLockEnabled
+    {
+        get => isIdleLockEnabled;
+        set => SetProperty(ref isIdleLockEnabled, value);
+    }
+
     public TimeSpan IdleLockTimeout
     {
         get => idleLockTimeout;
@@ -230,8 +241,37 @@ public sealed class MainWindowViewModel : ViewModelBase
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Idle lock timeout must be greater than zero.");
             }
 
-            SetProperty(ref idleLockTimeout, value);
+            if (value.TotalSeconds > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Idle lock timeout is too large.");
+            }
+
+            TimeSpan normalizedValue = TimeSpan.FromSeconds((int)value.TotalSeconds);
+            if (SetProperty(ref idleLockTimeout, normalizedValue))
+            {
+                OnPropertyChanged(nameof(IdleLockTimeoutSeconds));
+            }
         }
+    }
+
+    public int IdleLockTimeoutSeconds
+    {
+        get => (int)IdleLockTimeout.TotalSeconds;
+        set
+        {
+            if (value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Idle lock timeout must be greater than zero.");
+            }
+
+            IdleLockTimeout = TimeSpan.FromSeconds(value);
+        }
+    }
+
+    public string IdleLockSettingsStatusText
+    {
+        get => idleLockSettingsStatusText;
+        private set => SetProperty(ref idleLockSettingsStatusText, value);
     }
 
     public bool IsVaultLocked
@@ -268,6 +308,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         if (IsVaultLocked)
         {
             return true;
+        }
+
+        if (!IsIdleLockEnabled)
+        {
+            return false;
         }
 
         if (activeConnection?.State != ConnectionState.Open || string.IsNullOrWhiteSpace(activeVaultFilePath))
@@ -326,6 +371,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         activeConnection = connection;
         IsVaultLocked = false;
         await LoadClipboardSettingsAsync(cancellationToken).ConfigureAwait(true);
+        await LoadIdleLockSettingsAsync(cancellationToken).ConfigureAwait(true);
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
         SearchText = string.Empty;
         SelectedSearchFilter = SearchVaultFilter.All;
@@ -638,6 +684,23 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private async Task ApplyIdleLockSettingsAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        try
+        {
+            await sender.Send(
+                new SaveIdleLockSettingsCommand(connection, IsIdleLockEnabled, IdleLockTimeout),
+                cancellationToken).ConfigureAwait(true);
+            IdleLockSettingsStatusText = "Idle lock settings saved and applied. Save the vault file to persist them on disk.";
+            MarkDirty();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            contextMenuInputService.ShowValidationError("Settings failed", "Idle lock settings could not be saved. " + ex.Message);
+        }
+    }
+
     private async Task CopyFieldValueAsync(object? parameter, CancellationToken cancellationToken)
     {
         VaultFieldViewModel field = RequireFieldParameter(parameter);
@@ -676,6 +739,26 @@ public sealed class MainWindowViewModel : ViewModelBase
             IsClipboardAutoClearEnabled = ClipboardSettingsRecord.Default.AutoClearEnabled;
             ClipboardAutoClearDelay = ClipboardSettingsRecord.Default.AutoClearDelay;
             ClipboardSettingsStatusText = "Clipboard settings reset to secure defaults because saved settings could not be loaded.";
+        }
+    }
+
+    private async Task LoadIdleLockSettingsAsync(CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        try
+        {
+            IdleLockSettingsRecord settings = await sender
+                .Send(new GetIdleLockSettingsQuery(connection), cancellationToken)
+                .ConfigureAwait(true);
+            IsIdleLockEnabled = settings.IsEnabled;
+            IdleLockTimeout = settings.Timeout;
+            IdleLockSettingsStatusText = "Idle lock settings loaded.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            IsIdleLockEnabled = IdleLockSettingsRecord.Default.IsEnabled;
+            IdleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
+            IdleLockSettingsStatusText = "Idle lock settings reset to secure defaults because saved settings could not be loaded.";
         }
     }
 
