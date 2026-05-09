@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Text;
 using MediatR;
 using StructVault.Application.Persistence;
 using StructVault.Desktop.Commands;
@@ -35,6 +36,43 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
     }
 
     [Fact]
+    public async Task AddFieldUpdatesSelectedFieldsFromPersistedVaultFields()
+    {
+        SqliteInMemoryVaultDatabaseConnectionFactory connectionFactory = new(new SqliteVaultSchemaProvider());
+        await using DbConnection connection = await connectionFactory.CreateOpenConnectionAsync(CancellationToken.None);
+        PersistenceBackedSender sender = new();
+        RecordingContextMenuInputService inputService = new()
+        {
+            NextNodeName = "Infrastructure",
+            NextFieldInput = new VaultFieldInput("  Endpoint  ", "  localhost  ")
+        };
+        MainWindowViewModel viewModel = new(sender, inputService);
+        await viewModel.LoadVaultTreeAsync(connection);
+        await ((AsyncCommand)viewModel.AddRootNodeCommand).ExecuteAsync();
+        VaultTreeNodeViewModel selectedNode = Assert.Single(viewModel.VaultNodes);
+        sender.HandledRequests.Clear();
+
+        await ((AsyncCommand)viewModel.AddFieldCommand).ExecuteAsync(selectedNode);
+
+        Assert.Same(selectedNode, viewModel.SelectedNode);
+        Assert.True(viewModel.HasSelectedNode);
+        Assert.True(viewModel.HasSelectedFields);
+        VaultFieldViewModel field = Assert.Single(viewModel.SelectedFields);
+        Assert.Equal(selectedNode.Id, field.NodeId);
+        Assert.Equal("Endpoint", field.Key);
+        Assert.Equal("localhost", field.DisplayValue);
+        Assert.Equal(Encoding.UTF8.GetByteCount("localhost"), field.ValueLength);
+        Assert.Equal(0, field.SortOrder);
+        CreateVaultFieldCommand createCommand = Assert.Single(sender.HandledRequests.OfType<CreateVaultFieldCommand>());
+        Assert.Same(connection, createCommand.Connection);
+        Assert.Equal(selectedNode.Id, createCommand.NodeId);
+        Assert.Equal("Endpoint", createCommand.Key);
+        Assert.Equal("localhost", Encoding.UTF8.GetString(createCommand.Value));
+        Assert.Equal(0, createCommand.SortOrder);
+        Assert.True(sender.HandledRequests.Count(request => request is ListVaultFieldsByNodeIdQuery) >= 2);
+    }
+
+    [Fact]
     public async Task AddChildNodeUpdatesBoundTreeFromPersistedVaultHierarchy()
     {
         SqliteInMemoryVaultDatabaseConnectionFactory connectionFactory = new(new SqliteVaultSchemaProvider());
@@ -66,6 +104,8 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
     {
         public string? NextNodeName { get; set; }
 
+        public VaultFieldInput? NextFieldInput { get; set; }
+
         public string? RequestNodeName(string title, string message, string? initialName = null)
         {
             return NextNodeName;
@@ -73,7 +113,7 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
 
         public VaultFieldInput? RequestField(string title, string keyMessage, string valueMessage, VaultFieldInput? initialValue = null)
         {
-            throw new NotSupportedException("Add-node tree update tests do not request fields.");
+            return NextFieldInput;
         }
 
         public bool ConfirmDelete(string title, string message)
@@ -124,6 +164,9 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
                 case CreateVaultNodeCommand command:
                     await new CreateVaultNodeCommandHandler(nodeStore).Handle(command, cancellationToken).ConfigureAwait(false);
                     break;
+                case CreateVaultFieldCommand command:
+                    await new CreateVaultFieldCommandHandler(fieldStore).Handle(command, cancellationToken).ConfigureAwait(false);
+                    break;
                 default:
                     throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.");
             }
@@ -140,6 +183,9 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
                 case ListVaultFieldsByNodeIdQuery query:
                     return await Send<IReadOnlyList<VaultFieldRecord>>(query, cancellationToken).ConfigureAwait(false);
                 case CreateVaultNodeCommand command:
+                    await Send(command, cancellationToken).ConfigureAwait(false);
+                    return null;
+                case CreateVaultFieldCommand command:
                     await Send(command, cancellationToken).ConfigureAwait(false);
                     return null;
                 default:
