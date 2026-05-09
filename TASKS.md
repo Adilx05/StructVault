@@ -83,7 +83,7 @@
 ### Implementation
 - [x] MainWindow layout (Tree + Detail panel)
 - [x] Bind TreeView to node structure
-- [ ] Implement dynamic field rendering
+- [x] Implement dynamic field rendering
 - [ ] Context menus for Node and Field
 
 ### Tests (UI / ViewModel level)

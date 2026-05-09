@@ -1,3 +1,4 @@
+using System.Windows;
 using MahApps.Metro.Controls;
 using StructVault.Desktop.ViewModels;
 
@@ -14,5 +15,13 @@ public partial class MainWindow : MetroWindow
         : this()
     {
         DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+    }
+
+    private async void VaultTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            await viewModel.SelectVaultNodeAsync(e.NewValue as VaultTreeNodeViewModel).ConfigureAwait(true);
+        }
     }
 }
