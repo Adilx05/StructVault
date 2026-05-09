@@ -79,7 +79,7 @@ public sealed class VaultClipboardSettingsTests
         VaultFieldRecord field = new("field-secret", "node-root", "Secret", "value"u8.ToArray(), 0, Timestamp, Timestamp);
         RecordingSender sender = new([root])
         {
-            ClipboardSettings = new ClipboardSettingsRecord(autoClearEnabled: false, TimeSpan.FromSeconds(90)),
+            ClipboardSettings = new ClipboardSettingsRecord(false, TimeSpan.FromSeconds(90)),
             FieldsByNodeId = { ["node-root"] = new[] { field } }
         };
         MainWindowViewModel viewModel = new(sender);
