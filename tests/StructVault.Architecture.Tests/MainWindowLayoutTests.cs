@@ -38,7 +38,7 @@ public sealed class MainWindowLayoutTests
             .Where(element => (string?)element.Attribute(XamlNamespace + "Name") == "VaultDetailScrollViewer"));
 
         Assert.Equal("VaultTreeView", (string?)vaultTreeView.Attribute(XamlNamespace + "Name"));
-        Assert.Equal("1", (string?)vaultTreeView.Attribute("Grid.Row"));
+        Assert.Equal("2", (string?)vaultTreeView.Attribute("Grid.Row"));
         Assert.Equal("1", (string?)detailScrollViewer.Attribute("Grid.Row"));
         Assert.Contains(mainWindow.Descendants(PresentationNamespace + "TextBlock"),
             element => (string?)element.Attribute("Text") == "Vault structure");

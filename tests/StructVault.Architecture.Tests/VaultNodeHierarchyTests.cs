@@ -175,6 +175,14 @@ public sealed class VaultNodeHierarchyTests
         {
             return Task.FromResult(nodes);
         }
+
+        public Task<IReadOnlyList<VaultSearchResultRecord>> SearchAsync(
+            DbConnection connection,
+            SearchVaultQuery query,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<VaultSearchResultRecord>>(Array.Empty<VaultSearchResultRecord>());
+        }
     }
 
     private sealed class UnusedDbConnection : DbConnection
