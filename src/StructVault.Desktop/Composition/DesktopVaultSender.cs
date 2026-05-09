@@ -101,6 +101,9 @@ internal sealed class DesktopVaultSender : ISender
             GetIdleActivityStateQuery query => await new GetIdleActivityStateQueryHandler(idleActivityTracker)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
+            LockVaultAfterIdleTimeoutCommand command => await new LockVaultAfterIdleTimeoutCommandHandler(idleActivityTracker)
+                .Handle(command, cancellationToken)
+                .ConfigureAwait(false),
             _ => throw CreateUnsupportedRequestException(request)
         };
 
@@ -198,6 +201,8 @@ internal sealed class DesktopVaultSender : ISender
                 return await Send(command, cancellationToken).ConfigureAwait(false);
             case GetIdleActivityStateQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
+            case LockVaultAfterIdleTimeoutCommand command:
+                return await Send(command, cancellationToken).ConfigureAwait(false);
             case CreateQpsVaultFileBackupCommand command:
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
