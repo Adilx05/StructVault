@@ -103,7 +103,19 @@
         </DockPanel>
 
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"
                                   MinWidth="240" />
                 <ColumnDefinition Width="8" />
@@ -301,6 +313,28 @@
                         </Border>
                     </ScrollViewer>
                 </Grid>
+            </Border>
+            </Grid>
+
+            <Border Background="#EFFFFFFF"
+                    BorderBrush="#FFB0B0B0"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Visibility="{Binding IsVaultLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel MaxWidth="420"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Text="Vault locked" />
+                    <TextBlock Margin="0,12,0,0"
+                               HorizontalAlignment="Center"
+                               Foreground="#FF555555"
+                               Text="StructVault locked this vault after the configured idle timeout. Unlock will require the master password in the next workflow step."
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

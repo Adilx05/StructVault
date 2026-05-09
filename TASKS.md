@@ -139,11 +139,11 @@
 
 ### Implementation
 - [x] Track user inactivity
-- [ ] Lock vault after timeout
+- [x] Lock vault after timeout
 - [ ] Prompt for password to unlock
 
 ### Tests
-- [ ] Test: idle timer triggers lock
+- [x] Test: idle timer triggers lock
 - [ ] Test: correct password unlocks
 - [ ] Test: incorrect password fails
 

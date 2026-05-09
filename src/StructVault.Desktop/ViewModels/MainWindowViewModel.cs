@@ -38,6 +38,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private SearchVaultFilter selectedSearchFilter = SearchVaultFilter.All;
     private bool isClipboardAutoClearEnabled = true;
     private TimeSpan clipboardAutoClearDelay = CopyVaultFieldValueToClipboardCommand.DefaultAutoClearDelay;
+    private TimeSpan idleLockTimeout = TimeSpan.FromMinutes(15);
+    private bool isVaultLocked;
     private bool isDirty;
 
     public MainWindowViewModel(ISender sender)
@@ -182,12 +184,69 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref isDirty, value);
     }
 
+    public TimeSpan IdleLockTimeout
+    {
+        get => idleLockTimeout;
+        set
+        {
+            if (value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Idle lock timeout must be greater than zero.");
+            }
+
+            SetProperty(ref idleLockTimeout, value);
+        }
+    }
+
+    public bool IsVaultLocked
+    {
+        get => isVaultLocked;
+        private set
+        {
+            if (SetProperty(ref isVaultLocked, value))
+            {
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+    }
+
     public bool CanSave => CanSaveVault(null);
 
     public Task<DateTimeOffset> RecordUserActivityAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (IsVaultLocked)
+        {
+            return Task.FromResult(DateTimeOffset.UtcNow);
+        }
+
         return sender.Send(new RecordUserActivityCommand(), cancellationToken);
+    }
+
+    public async Task<bool> LockVaultAfterIdleTimeoutAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (IsVaultLocked)
+        {
+            return true;
+        }
+
+        if (activeConnection?.State != ConnectionState.Open)
+        {
+            return false;
+        }
+
+        VaultLockState lockState = await sender
+            .Send(new LockVaultAfterIdleTimeoutCommand(IdleLockTimeout), cancellationToken)
+            .ConfigureAwait(true);
+
+        if (!lockState.IsLocked)
+        {
+            return false;
+        }
+
+        LockVault();
+        return true;
     }
 
     public Task<IdleActivityState> GetIdleActivityStateAsync(TimeSpan idleTimeout, CancellationToken cancellationToken = default)
@@ -221,6 +280,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         cancellationToken.ThrowIfCancellationRequested();
 
         activeConnection = connection;
+        IsVaultLocked = false;
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
         SearchText = string.Empty;
         SelectedSearchFilter = SearchVaultFilter.All;
@@ -587,6 +647,39 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SearchStatusText));
     }
 
+    private void LockVault()
+    {
+        SelectedNode = null;
+        ClearSelectedFields();
+        vaultNodes.Clear();
+        SearchText = string.Empty;
+        ClearSearchResults();
+        IsVaultLocked = true;
+        RaiseCommandCanExecuteChanged();
+    }
+
+    private void RaiseCommandCanExecuteChanged()
+    {
+        RaiseCanExecuteChanged(SaveVaultCommand);
+        RaiseCanExecuteChanged(SearchVaultCommand);
+        RaiseCanExecuteChanged(AddRootNodeCommand);
+        RaiseCanExecuteChanged(AddChildNodeCommand);
+        RaiseCanExecuteChanged(RenameNodeCommand);
+        RaiseCanExecuteChanged(DeleteNodeCommand);
+        RaiseCanExecuteChanged(AddFieldCommand);
+        RaiseCanExecuteChanged(EditFieldCommand);
+        RaiseCanExecuteChanged(DeleteFieldCommand);
+        RaiseCanExecuteChanged(CopyFieldValueCommand);
+    }
+
+    private static void RaiseCanExecuteChanged(ICommand command)
+    {
+        if (command is AsyncCommand asyncCommand)
+        {
+            asyncCommand.RaiseCanExecuteChanged();
+        }
+    }
+
     private void MarkDirty()
     {
         IsDirty = true;
@@ -599,7 +692,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private bool CanMutateVault(object? parameter)
     {
-        return activeConnection?.State == ConnectionState.Open;
+        return !IsVaultLocked && activeConnection?.State == ConnectionState.Open;
     }
 
     private bool CanSaveVault(object? parameter)

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using MahApps.Metro.Controls;
 using StructVault.Application.Persistence;
 using StructVault.Desktop.Composition;
@@ -12,7 +13,9 @@ namespace StructVault.Desktop;
 public partial class MainWindow : MetroWindow
 {
     private static readonly TimeSpan ActivityReportThrottle = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan IdleLockCheckInterval = TimeSpan.FromSeconds(5);
 
+    private readonly DispatcherTimer idleLockTimer;
     private bool closeConfirmed;
     private bool closeConfirmationInProgress;
     private DateTimeOffset lastActivityReportUtc = DateTimeOffset.MinValue;
@@ -20,16 +23,28 @@ public partial class MainWindow : MetroWindow
     public MainWindow()
     {
         InitializeComponent();
+        idleLockTimer = CreateIdleLockTimer();
         ConfigureDefaultViewModel();
         ConfigureActivityTracking();
+        ConfigureIdleLockMonitoring();
     }
 
     public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
+        idleLockTimer = CreateIdleLockTimer();
         DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         Closing += MainWindowClosing;
         ConfigureActivityTracking();
+        ConfigureIdleLockMonitoring();
+    }
+
+    private static DispatcherTimer CreateIdleLockTimer()
+    {
+        return new DispatcherTimer
+        {
+            Interval = IdleLockCheckInterval
+        };
     }
 
     private void ConfigureActivityTracking()
@@ -40,6 +55,13 @@ public partial class MainWindow : MetroWindow
         AddHandler(Mouse.PreviewMouseWheelEvent, new MouseWheelEventHandler(UserActivityDetected), true);
         AddHandler(Mouse.PreviewMouseMoveEvent, new MouseEventHandler(UserActivityDetected), true);
         AddHandler(Stylus.PreviewStylusDownEvent, new StylusDownEventHandler(UserActivityDetected), true);
+    }
+
+    private void ConfigureIdleLockMonitoring()
+    {
+        idleLockTimer.Tick += IdleLockTimerTick;
+        Loaded += (_, _) => idleLockTimer.Start();
+        Closed += (_, _) => idleLockTimer.Stop();
     }
 
     private void ConfigureDefaultViewModel()
@@ -58,6 +80,16 @@ public partial class MainWindow : MetroWindow
     private async void UserActivityDetected(object sender, RoutedEventArgs e)
     {
         await ReportUserActivityAsync(force: false).ConfigureAwait(true);
+    }
+
+    private async void IdleLockTimerTick(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.LockVaultAfterIdleTimeoutAsync().ConfigureAwait(true);
     }
 
     private async Task ReportUserActivityAsync(bool force)
