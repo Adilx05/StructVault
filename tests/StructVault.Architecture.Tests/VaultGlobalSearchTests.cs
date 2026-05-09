@@ -79,6 +79,43 @@ public sealed class VaultGlobalSearchTests
         Assert.Equal("percent-field", result.FieldId);
     }
 
+
+    [Fact]
+    public async Task SearchVaultQueryHandlerCanFilterToNodesOnly()
+    {
+        SqliteVaultNodeWriter nodeStore = new();
+        SqliteVaultFieldWriter fieldStore = new();
+        await using DbConnection connection = await CreateSeededConnectionAsync(nodeStore, fieldStore);
+        SearchVaultQueryHandler handler = new(nodeStore, fieldStore);
+
+        IReadOnlyList<VaultSearchResultRecord> results = await handler.Handle(new SearchVaultQuery(connection, "finance", SearchVaultFilter.Nodes), CancellationToken.None);
+
+        VaultSearchResultRecord result = Assert.Single(results);
+        Assert.Equal(VaultSearchResultKind.Node, result.Kind);
+        Assert.Equal("finance", result.NodeId);
+    }
+
+    [Fact]
+    public async Task SearchVaultQueryHandlerCanFilterToFieldsOnly()
+    {
+        SqliteVaultNodeWriter nodeStore = new();
+        SqliteVaultFieldWriter fieldStore = new();
+        await using DbConnection connection = await CreateSeededConnectionAsync(nodeStore, fieldStore);
+        SearchVaultQueryHandler handler = new(nodeStore, fieldStore);
+
+        IReadOnlyList<VaultSearchResultRecord> results = await handler.Handle(new SearchVaultQuery(connection, "finance", SearchVaultFilter.Fields), CancellationToken.None);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void SearchVaultQueryRejectsUnsupportedFilter()
+    {
+        using Microsoft.Data.Sqlite.SqliteConnection connection = new("Data Source=:memory:");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new SearchVaultQuery(connection, "personal", (SearchVaultFilter)99));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

@@ -113,7 +113,7 @@
 
 ### Implementation
 - [x] Implement global search (nodes + fields)
-- [ ] Add filtering support
+- [x] Add filtering support
 
 ### Tests
 - [x] Test: search by node name

@@ -24,11 +24,42 @@ public sealed class VaultGlobalSearchViewModelTests
         await viewModel.SearchVaultAsync();
 
         VaultSearchResultViewModel result = Assert.Single(viewModel.SearchResults);
-        Assert.IsType<SearchVaultQuery>(sender.LastRequest);
+        SearchVaultQuery query = Assert.IsType<SearchVaultQuery>(sender.LastRequest);
+        Assert.Equal(SearchVaultFilter.All, query.Filter);
         Assert.Equal("Personal", result.Title);
         Assert.Equal("Node name", result.Subtitle);
         Assert.True(viewModel.HasSearchResults);
         Assert.Equal("1 search result", viewModel.SearchStatusText);
+    }
+
+
+    [Fact]
+    public async Task SearchVaultAsyncPassesSelectedFilterToMediatorQuery()
+    {
+        RecordingSender sender = new(
+            [new VaultNodeHierarchyRecord("node-1", null, "Personal", 0, Timestamp, Timestamp, Array.Empty<VaultNodeHierarchyRecord>())],
+            [new VaultSearchResultRecord(VaultSearchResultKind.Field, "node-1", "Personal", "field-1", "Email", "Field key")]);
+        MainWindowViewModel viewModel = new(sender);
+        await using SqliteConnection connection = await CreateOpenConnectionAsync();
+        await viewModel.LoadVaultTreeAsync(connection);
+
+        viewModel.SearchText = "email";
+        viewModel.SelectedSearchFilter = SearchVaultFilter.Fields;
+        await viewModel.SearchVaultAsync();
+
+        SearchVaultQuery query = Assert.IsType<SearchVaultQuery>(sender.LastRequest);
+        Assert.Equal(SearchVaultFilter.Fields, query.Filter);
+        VaultSearchResultViewModel result = Assert.Single(viewModel.SearchResults);
+        Assert.Equal("Email", result.Title);
+    }
+
+    [Fact]
+    public void SelectedSearchFilterRejectsUnsupportedValues()
+    {
+        RecordingSender sender = new([], []);
+        MainWindowViewModel viewModel = new(sender);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => viewModel.SelectedSearchFilter = (SearchVaultFilter)99);
     }
 
     [Fact]

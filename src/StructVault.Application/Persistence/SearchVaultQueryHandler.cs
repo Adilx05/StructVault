@@ -19,6 +19,17 @@ public sealed class SearchVaultQueryHandler : IRequestHandler<SearchVaultQuery, 
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
+        return request.Filter switch
+        {
+            SearchVaultFilter.All => await SearchNodesAndFieldsAsync(request, cancellationToken).ConfigureAwait(false),
+            SearchVaultFilter.Nodes => await nodeReader.SearchAsync(request.Connection, request, cancellationToken).ConfigureAwait(false),
+            SearchVaultFilter.Fields => await fieldReader.SearchAsync(request.Connection, request, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidOperationException($"Unsupported vault search filter '{request.Filter}'.")
+        };
+    }
+
+    private async Task<IReadOnlyList<VaultSearchResultRecord>> SearchNodesAndFieldsAsync(SearchVaultQuery request, CancellationToken cancellationToken)
+    {
         IReadOnlyList<VaultSearchResultRecord> nodeResults = await nodeReader
             .SearchAsync(request.Connection, request, cancellationToken)
             .ConfigureAwait(false);
