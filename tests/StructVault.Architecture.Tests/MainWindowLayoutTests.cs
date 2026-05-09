@@ -111,6 +111,18 @@ public sealed class MainWindowLayoutTests
             (string?)addChildNode.Attribute("CommandParameter"));
     }
 
+
+    [Fact]
+    public void MainWindowDefaultConstructorConfiguresRunnableViewModel()
+    {
+        string codeBehind = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml.cs"));
+
+        Assert.Contains("ConfigureDefaultViewModel();", codeBehind);
+        Assert.Contains("DataContext = new MainWindowViewModel(sender);", codeBehind);
+        Assert.Contains("LoadInitialVaultAsync(sender)", codeBehind);
+        Assert.Contains("new CreateInMemoryVaultDatabaseCommand()", codeBehind);
+    }
+
     [Fact]
     public void MainWindowNotifiesViewModelWhenTreeSelectionChanges()
     {
