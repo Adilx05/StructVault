@@ -350,9 +350,15 @@
                     <TextBlock Margin="0,12,0,0"
                                HorizontalAlignment="Center"
                                Foreground="#FF555555"
-                               Text="StructVault locked this vault after the configured idle timeout. Unlock will require the master password in the next workflow step."
+                               Text="StructVault locked this vault after the configured idle timeout. Enter the master password to unlock it."
                                TextAlignment="Center"
                                TextWrapping="Wrap" />
+                    <Button Margin="0,18,0,0"
+                            MinWidth="120"
+                            Padding="14,7"
+                            HorizontalAlignment="Center"
+                            Command="{Binding UnlockVaultCommand}"
+                            Content="Unlock" />
                 </StackPanel>
             </Border>
         </Grid>

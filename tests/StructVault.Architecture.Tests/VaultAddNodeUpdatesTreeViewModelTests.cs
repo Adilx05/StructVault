@@ -116,6 +116,11 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
             return NextFieldInput;
         }
 
+        public string? RequestPassword(string title, string message)
+        {
+            return null;
+        }
+
         public bool ConfirmDelete(string title, string message)
         {
             throw new NotSupportedException("Add-node tree update tests do not delete nodes or fields.");
