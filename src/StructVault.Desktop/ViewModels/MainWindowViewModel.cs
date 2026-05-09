@@ -65,6 +65,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         EditFieldCommand = new AsyncCommand(EditFieldAsync, CanMutateField);
         DeleteFieldCommand = new AsyncCommand(DeleteFieldAsync, CanMutateField);
         CopyFieldValueCommand = new AsyncCommand(CopyFieldValueAsync, CanMutateField);
+        UnlockVaultCommand = new AsyncCommand(UnlockVaultAsync, CanUnlockVault);
     }
 
     public ReadOnlyObservableCollection<VaultTreeNodeViewModel> VaultNodes => readOnlyVaultNodes;
@@ -94,6 +95,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand DeleteFieldCommand { get; }
 
     public ICommand CopyFieldValueCommand { get; }
+
+    public ICommand UnlockVaultCommand { get; }
 
     public VaultTreeNodeViewModel? SelectedNode
     {
@@ -206,11 +209,14 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (SetProperty(ref isVaultLocked, value))
             {
                 OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(CanUnlock));
             }
         }
     }
 
     public bool CanSave => CanSaveVault(null);
+
+    public bool CanUnlock => CanUnlockVault(null);
 
     public Task<DateTimeOffset> RecordUserActivityAsync(CancellationToken cancellationToken = default)
     {
@@ -231,7 +237,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return true;
         }
 
-        if (activeConnection?.State != ConnectionState.Open)
+        if (activeConnection?.State != ConnectionState.Open || string.IsNullOrWhiteSpace(activeVaultFilePath))
         {
             return false;
         }
@@ -253,6 +259,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         cancellationToken.ThrowIfCancellationRequested();
         return sender.Send(new GetIdleActivityStateQuery(idleTimeout), cancellationToken);
+    }
+
+    public async Task<bool> UnlockVaultAsync(CancellationToken cancellationToken = default)
+    {
+        return await UnlockVaultAsync(null, cancellationToken).ConfigureAwait(true);
     }
 
     public async Task<bool> ConfirmExitAsync(CancellationToken cancellationToken = default)
@@ -310,6 +321,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         activeVaultFilePath = vaultFilePath;
         activeVaultPassword = password;
         OnPropertyChanged(nameof(CanSave));
+        OnPropertyChanged(nameof(CanUnlock));
     }
 
     public async Task SaveVaultAsync(CancellationToken cancellationToken = default)
@@ -375,6 +387,50 @@ public sealed class MainWindowViewModel : ViewModelBase
             .ConfigureAwait(true);
 
         ReplaceSelectedFields(fields);
+    }
+
+    private async Task<bool> UnlockVaultAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsVaultLocked)
+        {
+            return true;
+        }
+
+        if (activeConnection?.State != ConnectionState.Open || string.IsNullOrWhiteSpace(activeVaultFilePath))
+        {
+            contextMenuInputService.ShowValidationError(
+                "Unlock unavailable",
+                "This vault cannot be unlocked because no encrypted QPS file is available for password verification.");
+            return false;
+        }
+
+        string? requestedPassword = contextMenuInputService.RequestPassword(
+            "Unlock vault",
+            "Enter the master password to unlock this vault.");
+        string? password = NormalizeRequiredUserText(requestedPassword, "Unlock vault", "Password cannot be empty.");
+        if (password is null)
+        {
+            return false;
+        }
+
+        bool unlocked = await sender
+            .Send(new UnlockVaultCommand(activeVaultFilePath, password), cancellationToken)
+            .ConfigureAwait(true);
+        if (!unlocked)
+        {
+            contextMenuInputService.ShowValidationError(
+                "Unlock failed",
+                "The vault could not be unlocked. Check the master password and try again.");
+            return false;
+        }
+
+        activeVaultPassword = password;
+        IsVaultLocked = false;
+        await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
+        await sender.Send(new RecordUserActivityCommand(), cancellationToken).ConfigureAwait(true);
+        RaiseCommandCanExecuteChanged();
+        return true;
     }
 
     private async Task<bool> SaveAndConfirmExitAsync(CancellationToken cancellationToken)
@@ -670,6 +726,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaiseCanExecuteChanged(EditFieldCommand);
         RaiseCanExecuteChanged(DeleteFieldCommand);
         RaiseCanExecuteChanged(CopyFieldValueCommand);
+        RaiseCanExecuteChanged(UnlockVaultCommand);
     }
 
     private static void RaiseCanExecuteChanged(ICommand command)
@@ -715,6 +772,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool CanMutateField(object? parameter)
     {
         return parameter is VaultFieldViewModel && CanMutateVault(parameter);
+    }
+
+    private bool CanUnlockVault(object? parameter)
+    {
+        return IsVaultLocked &&
+            activeConnection?.State == ConnectionState.Open &&
+            !string.IsNullOrWhiteSpace(activeVaultFilePath);
     }
 
     private int GetNextRootNodeSortOrder()

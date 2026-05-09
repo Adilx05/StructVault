@@ -208,6 +208,11 @@ public sealed class VaultContextMenuViewModelTests
             return NextFieldInput;
         }
 
+        public string? RequestPassword(string title, string message)
+        {
+            return null;
+        }
+
         public bool ConfirmDelete(string title, string message)
         {
             return ConfirmDeleteResult;

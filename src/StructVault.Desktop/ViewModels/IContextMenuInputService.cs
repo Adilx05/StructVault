@@ -6,6 +6,8 @@ public interface IContextMenuInputService
 
     VaultFieldInput? RequestField(string title, string keyMessage, string valueMessage, VaultFieldInput? initialValue = null);
 
+    string? RequestPassword(string title, string message);
+
     bool ConfirmDelete(string title, string message);
 
     UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave);

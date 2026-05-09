@@ -27,6 +27,18 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         return accepted ? new VaultFieldInput(keyTextBox.Text, valueTextBox.Text) : null;
     }
 
+    public string? RequestPassword(string title, string message)
+    {
+        PasswordBox passwordBox = new()
+        {
+            Margin = new Thickness(0, 6, 0, 0),
+            MinWidth = 320
+        };
+
+        bool accepted = ShowInputDialog(title, message, passwordBox);
+        return accepted ? passwordBox.Password : null;
+    }
+
     public bool ConfirmDelete(string title, string message)
     {
         MessageBoxResult result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
