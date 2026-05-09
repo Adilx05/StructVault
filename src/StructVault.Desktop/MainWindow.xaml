@@ -65,7 +65,7 @@
                     <TextBox Grid.Row="1"
                              Margin="0,6,0,0"
                              IsReadOnly="True"
-                             Text="{Binding DisplayValue}"
+                             Text="{Binding DisplayValue, Mode=OneWay}"
                              TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" />
                 </Grid>
