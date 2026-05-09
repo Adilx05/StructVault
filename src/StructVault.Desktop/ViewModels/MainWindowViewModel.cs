@@ -578,6 +578,61 @@ public sealed class MainWindowViewModel : ViewModelBase
         return true;
     }
 
+    public async Task<bool> ReorderVaultFieldAsync(
+        VaultFieldViewModel? draggedField,
+        VaultFieldViewModel? targetField,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (draggedField is null || targetField is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(draggedField.Id, targetField.Id, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!CanMutateVault(null))
+        {
+            return false;
+        }
+
+        if (SelectedNode is null)
+        {
+            contextMenuInputService.ShowValidationError(
+                "Reorder unavailable",
+                "Select a vault node before reordering fields.");
+            return false;
+        }
+
+        if (!string.Equals(draggedField.NodeId, targetField.NodeId, StringComparison.Ordinal) ||
+            !string.Equals(draggedField.NodeId, SelectedNode.Id, StringComparison.Ordinal))
+        {
+            contextMenuInputService.ShowValidationError(
+                "Reorder unavailable",
+                "Drag and drop can only reorder fields within the selected node.");
+            return false;
+        }
+
+        using IDisposable loadingScope = BeginLoading("Reordering field...");
+        DbConnection connection = RequireActiveOpenConnection();
+        bool reordered = await sender
+            .Send(new ReorderVaultFieldCommand(connection, draggedField.Id, targetField.SortOrder, DateTimeOffset.UtcNow), cancellationToken)
+            .ConfigureAwait(true);
+
+        if (!reordered)
+        {
+            return false;
+        }
+
+        MarkDirty();
+        await SelectVaultNodeAsync(SelectedNode, cancellationToken).ConfigureAwait(true);
+        return true;
+    }
+
     private async Task<bool> UnlockVaultAsync(object? parameter, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
