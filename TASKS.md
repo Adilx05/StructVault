@@ -99,13 +99,13 @@
 - [x] Implement manual save system
 - [x] Implement dirty flag tracking
 - [x] Prompt user on exit if unsaved changes exist
-- [ ] Create `.bak` backup before overwrite
+- [x] Create `.bak` backup before overwrite
 
 ### Tests
 - [x] Test: dirty flag triggers correctly
 - [x] Test: save clears dirty state
-- [ ] Test: backup file is created
-- [ ] Test: restore from backup works
+- [x] Test: backup file is created
+- [x] Test: restore from backup works
 
 ---
 

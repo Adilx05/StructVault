@@ -29,6 +29,7 @@ public sealed class QpsManualSaveWorkflowTests
             serializer,
             new Argon2idKeyDerivationService(),
             new Aes256GcmEncryptionService(),
+            new FileSystemQpsFileBackupService(),
             new FileSystemQpsFileWriter());
         OpenQpsVaultFileQueryHandler openHandler = new(
             new FileSystemQpsFileReader(),
@@ -67,11 +68,13 @@ public sealed class QpsManualSaveWorkflowTests
     {
         SqliteInMemoryVaultDatabaseConnectionFactory connectionFactory = new(new SqliteVaultSchemaProvider());
         RecordingVaultDatabaseSerializer serializer = new();
+        RecordingQpsFileBackupService backupService = new();
         RecordingQpsFileWriter writer = new();
         SaveQpsVaultFileCommandHandler handler = new(
             serializer,
             new Argon2idKeyDerivationService(),
             new Aes256GcmEncryptionService(),
+            backupService,
             writer);
 
         await using DbConnection connection = await connectionFactory.CreateOpenConnectionAsync(CancellationToken.None);
@@ -80,7 +83,119 @@ public sealed class QpsManualSaveWorkflowTests
             await handler.Handle(new SaveQpsVaultFileCommand(connection, "vault.qps", "   "), CancellationToken.None));
 
         Assert.False(serializer.SerializeWasCalled);
+        Assert.False(backupService.BackupWasCalled);
         Assert.False(writer.WriteWasCalled);
+    }
+
+    [Fact]
+    public async Task ManualSaveCreatesBackupFromExistingVaultBeforeOverwrite()
+    {
+        string directoryPath = CreateUniqueTempDirectoryPath();
+        string vaultFilePath = Path.Combine(directoryPath, "vault.qps");
+        string backupFilePath = FileSystemQpsFileBackupService.CreateBackupPath(vaultFilePath);
+        byte[] initialFieldValue = Encoding.UTF8.GetBytes("initial-manual-save-secret");
+        byte[] replacementFieldValue = Encoding.UTF8.GetBytes("replacement-manual-save-secret");
+        SqliteVaultSchemaProvider schemaProvider = new();
+        SqliteInMemoryVaultDatabaseConnectionFactory connectionFactory = new(schemaProvider);
+        SqliteVaultDatabaseSerializer serializer = new(schemaProvider);
+        SaveQpsVaultFileCommandHandler saveHandler = new(
+            serializer,
+            new Argon2idKeyDerivationService(),
+            new Aes256GcmEncryptionService(),
+            new FileSystemQpsFileBackupService(),
+            new FileSystemQpsFileWriter());
+
+        try
+        {
+            await using DbConnection connection = await connectionFactory.CreateOpenConnectionAsync(CancellationToken.None);
+            await InsertVaultDataAsync(connection, initialFieldValue);
+
+            await saveHandler.Handle(new SaveQpsVaultFileCommand(connection, vaultFilePath, VaultPassword), CancellationToken.None);
+
+            Assert.False(File.Exists(backupFilePath));
+            byte[] initialQpsFileBytes = await File.ReadAllBytesAsync(vaultFilePath);
+
+            await UpdateFieldValueAsync(connection, replacementFieldValue);
+            await saveHandler.Handle(new SaveQpsVaultFileCommand(connection, vaultFilePath, VaultPassword), CancellationToken.None);
+
+            Assert.True(File.Exists(backupFilePath));
+            Assert.Equal(initialQpsFileBytes, await File.ReadAllBytesAsync(backupFilePath));
+            Assert.NotEqual(initialQpsFileBytes, await File.ReadAllBytesAsync(vaultFilePath));
+
+            ZeroMemory(initialQpsFileBytes);
+        }
+        finally
+        {
+            ZeroMemory(initialFieldValue);
+            ZeroMemory(replacementFieldValue);
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    [Fact]
+    public async Task BackupRestoreReplacesVaultWithMostRecentBackup()
+    {
+        string directoryPath = CreateUniqueTempDirectoryPath();
+        string vaultFilePath = Path.Combine(directoryPath, "vault.qps");
+        byte[] initialFieldValue = Encoding.UTF8.GetBytes("restored-manual-save-secret");
+        byte[] replacementFieldValue = Encoding.UTF8.GetBytes("overwritten-manual-save-secret");
+        SqliteVaultSchemaProvider schemaProvider = new();
+        SqliteInMemoryVaultDatabaseConnectionFactory connectionFactory = new(schemaProvider);
+        SqliteVaultDatabaseSerializer serializer = new(schemaProvider);
+        SaveQpsVaultFileCommandHandler saveHandler = new(
+            serializer,
+            new Argon2idKeyDerivationService(),
+            new Aes256GcmEncryptionService(),
+            new FileSystemQpsFileBackupService(),
+            new FileSystemQpsFileWriter());
+        RestoreQpsVaultFileBackupCommandHandler restoreHandler = new(new FileSystemQpsFileBackupService());
+        OpenQpsVaultFileQueryHandler openHandler = new(
+            new FileSystemQpsFileReader(),
+            new Argon2idKeyDerivationService(),
+            new Aes256GcmEncryptionService());
+
+        try
+        {
+            await using DbConnection connection = await connectionFactory.CreateOpenConnectionAsync(CancellationToken.None);
+            await InsertVaultDataAsync(connection, initialFieldValue);
+            await saveHandler.Handle(new SaveQpsVaultFileCommand(connection, vaultFilePath, VaultPassword), CancellationToken.None);
+
+            await UpdateFieldValueAsync(connection, replacementFieldValue);
+            await saveHandler.Handle(new SaveQpsVaultFileCommand(connection, vaultFilePath, VaultPassword), CancellationToken.None);
+
+            await restoreHandler.Handle(new RestoreQpsVaultFileBackupCommand(vaultFilePath), CancellationToken.None);
+
+            byte[] databaseImage = await openHandler.Handle(new OpenQpsVaultFileQuery(vaultFilePath, VaultPassword), CancellationToken.None);
+            await using DbConnection restoredConnection = await serializer.DeserializeAsync(databaseImage, CancellationToken.None);
+
+            Assert.Equal(initialFieldValue, await ExecuteBytesAsync(restoredConnection, "SELECT Value FROM VaultField WHERE Id = 'field';"));
+
+            ZeroMemory(databaseImage);
+        }
+        finally
+        {
+            ZeroMemory(initialFieldValue);
+            ZeroMemory(replacementFieldValue);
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    [Fact]
+    public async Task BackupRestoreRejectsMissingBackup()
+    {
+        string directoryPath = CreateUniqueTempDirectoryPath();
+        string vaultFilePath = Path.Combine(directoryPath, "vault.qps");
+        RestoreQpsVaultFileBackupCommandHandler restoreHandler = new(new FileSystemQpsFileBackupService());
+
+        try
+        {
+            await Assert.ThrowsAsync<FileNotFoundException>(async () =>
+                await restoreHandler.Handle(new RestoreQpsVaultFileBackupCommand(vaultFilePath), CancellationToken.None));
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
     }
 
     private static async Task InsertVaultDataAsync(DbConnection connection, byte[] fieldValue)
@@ -100,6 +215,24 @@ public sealed class QpsManualSaveWorkflowTests
         command.Parameters.Add(valueParameter);
 
         await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task UpdateFieldValueAsync(DbConnection connection, byte[] fieldValue)
+    {
+        await using DbCommand command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE VaultField
+            SET Value = $value, UpdatedAtUtc = '2026-05-09T00:00:01Z'
+            WHERE Id = 'field';
+            """;
+        DbParameter valueParameter = command.CreateParameter();
+        valueParameter.ParameterName = "$value";
+        valueParameter.Value = fieldValue;
+        command.Parameters.Add(valueParameter);
+
+        int affectedRows = await command.ExecuteNonQueryAsync();
+        Assert.Equal(1, affectedRows);
     }
 
     private static async Task<object?> ExecuteScalarAsync(DbConnection connection, string commandText)
@@ -172,6 +305,25 @@ public sealed class QpsManualSaveWorkflowTests
         public Task<DbConnection> DeserializeAsync(byte[] databaseImage, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("Manual save validation tests do not deserialize databases.");
+        }
+    }
+
+    private sealed class RecordingQpsFileBackupService : IQpsFileBackupService
+    {
+        public bool BackupWasCalled { get; private set; }
+
+        public bool RestoreWasCalled { get; private set; }
+
+        public Task BackupAsync(string filePath, CancellationToken cancellationToken)
+        {
+            BackupWasCalled = true;
+            return Task.CompletedTask;
+        }
+
+        public Task RestoreAsync(string filePath, CancellationToken cancellationToken)
+        {
+            RestoreWasCalled = true;
+            return Task.CompletedTask;
         }
     }
 

@@ -16,6 +16,7 @@ internal sealed class DesktopVaultSender : ISender
     private readonly Argon2idKeyDerivationService keyDerivationService = new();
     private readonly Aes256GcmEncryptionService encryptionService = new();
     private readonly FileSystemQpsFileReader fileReader = new();
+    private readonly FileSystemQpsFileBackupService backupService = new();
     private readonly FileSystemQpsFileWriter fileWriter = new();
 
     public DesktopVaultSender()
@@ -110,9 +111,15 @@ internal sealed class DesktopVaultSender : ISender
                 await new DeleteVaultFieldCommandHandler(fieldStore).Handle(command, cancellationToken).ConfigureAwait(false);
                 break;
             case SaveQpsVaultFileCommand command:
-                await new SaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, fileWriter)
+                await new SaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, backupService, fileWriter)
                     .Handle(command, cancellationToken)
                     .ConfigureAwait(false);
+                break;
+            case CreateQpsVaultFileBackupCommand command:
+                await new CreateQpsVaultFileBackupCommandHandler(backupService).Handle(command, cancellationToken).ConfigureAwait(false);
+                break;
+            case RestoreQpsVaultFileBackupCommand command:
+                await new RestoreQpsVaultFileBackupCommandHandler(backupService).Handle(command, cancellationToken).ConfigureAwait(false);
                 break;
             case WriteQpsVaultFileCommand command:
                 await new WriteQpsVaultFileCommandHandler(fileWriter).Handle(command, cancellationToken).ConfigureAwait(false);
@@ -164,6 +171,10 @@ internal sealed class DesktopVaultSender : ISender
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case ReadQpsVaultFileQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
+            case CreateQpsVaultFileBackupCommand command:
+                return await Send(command, cancellationToken).ConfigureAwait(false);
+            case RestoreQpsVaultFileBackupCommand command:
+                return await Send(command, cancellationToken).ConfigureAwait(false);
             case IRequest command:
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;

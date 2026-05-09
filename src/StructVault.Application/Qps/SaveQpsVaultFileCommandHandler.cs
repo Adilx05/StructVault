@@ -14,17 +14,20 @@ public sealed class SaveQpsVaultFileCommandHandler : IRequestHandler<SaveQpsVaul
     private readonly IVaultDatabaseSerializer databaseSerializer;
     private readonly IKeyDerivationService keyDerivationService;
     private readonly IAuthenticatedEncryptionService encryptionService;
+    private readonly IQpsFileBackupService backupService;
     private readonly IQpsFileWriter fileWriter;
 
     public SaveQpsVaultFileCommandHandler(
         IVaultDatabaseSerializer databaseSerializer,
         IKeyDerivationService keyDerivationService,
         IAuthenticatedEncryptionService encryptionService,
+        IQpsFileBackupService backupService,
         IQpsFileWriter fileWriter)
     {
         this.databaseSerializer = databaseSerializer ?? throw new ArgumentNullException(nameof(databaseSerializer));
         this.keyDerivationService = keyDerivationService ?? throw new ArgumentNullException(nameof(keyDerivationService));
         this.encryptionService = encryptionService ?? throw new ArgumentNullException(nameof(encryptionService));
+        this.backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         this.fileWriter = fileWriter ?? throw new ArgumentNullException(nameof(fileWriter));
     }
 
@@ -52,6 +55,7 @@ public sealed class SaveQpsVaultFileCommandHandler : IRequestHandler<SaveQpsVaul
             AesGcmEncryptionResult encryptionResult = encryptionService.Encrypt(databaseImage, key);
             qpsFileBytes = CreateQpsFileBytes(salt, encryptionResult);
 
+            await backupService.BackupAsync(request.FilePath, cancellationToken).ConfigureAwait(false);
             await fileWriter.WriteAsync(request.FilePath, qpsFileBytes, cancellationToken).ConfigureAwait(false);
         }
         finally
