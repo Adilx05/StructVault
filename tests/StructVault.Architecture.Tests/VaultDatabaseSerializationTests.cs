@@ -171,7 +171,7 @@ public sealed class VaultDatabaseSerializationTests
 
     private sealed class UnsupportedConnection : DbConnection
     {
-        public override string? ConnectionString { get; set; } = string.Empty;
+        public override string ConnectionString { get; set; } = string.Empty;
 
         public override string Database => string.Empty;
 
