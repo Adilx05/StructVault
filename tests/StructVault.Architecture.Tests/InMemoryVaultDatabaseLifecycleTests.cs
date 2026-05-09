@@ -127,7 +127,7 @@ public sealed class InMemoryVaultDatabaseLifecycleTests
 
     private sealed class ClosedDbConnection : DbConnection
     {
-        public override string ConnectionString { get; set; } = string.Empty;
+        public override string? ConnectionString { get; set; } = string.Empty;
 
         public override string Database => string.Empty;
 

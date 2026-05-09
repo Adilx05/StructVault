@@ -558,7 +558,7 @@ public sealed class VaultFieldPersistenceTests
 
     private sealed class UnusedDbConnection : DbConnection
     {
-        public override string ConnectionString { get; set; } = string.Empty;
+        public override string? ConnectionString { get; set; } = string.Empty;
 
         public override string Database => string.Empty;
 
