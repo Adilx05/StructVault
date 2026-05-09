@@ -28,7 +28,7 @@ internal sealed class DesktopVaultSender : ISender
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        object response = request switch
+        object? response = request switch
         {
             CreateInMemoryVaultDatabaseCommand command => await new CreateInMemoryVaultDatabaseCommandHandler(
                     new SqliteInMemoryVaultDatabaseConnectionFactory(new SqliteVaultSchemaProvider()))
@@ -88,7 +88,7 @@ internal sealed class DesktopVaultSender : ISender
             _ => throw CreateUnsupportedRequestException(request)
         };
 
-        return (TResponse)response;
+        return (TResponse)response!;
     }
 
     public async Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default)
@@ -172,9 +172,11 @@ internal sealed class DesktopVaultSender : ISender
             case ReadQpsVaultFileQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case CreateQpsVaultFileBackupCommand command:
-                return await Send(command, cancellationToken).ConfigureAwait(false);
+                await Send(command, cancellationToken).ConfigureAwait(false);
+                return null;
             case RestoreQpsVaultFileBackupCommand command:
-                return await Send(command, cancellationToken).ConfigureAwait(false);
+                await Send(command, cancellationToken).ConfigureAwait(false);
+                return null;
             case IRequest command:
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
