@@ -73,6 +73,8 @@ public sealed class SqliteVaultDatabaseSerializer : IVaultDatabaseSerializer
 
         try
         {
+            string schemaScript = EnsureSchemaConfigured();
+
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             imagePointer = sqlite3_malloc64((ulong)databaseImage.LongLength);
@@ -101,10 +103,20 @@ public sealed class SqliteVaultDatabaseSerializer : IVaultDatabaseSerializer
             imagePointer = IntPtr.Zero;
 
             await ExecuteNonQueryAsync(connection, "PRAGMA foreign_keys = ON;", cancellationToken).ConfigureAwait(false);
-            await ExecuteNonQueryAsync(connection, EnsureSchemaConfigured(), cancellationToken).ConfigureAwait(false);
+            await ExecuteNonQueryAsync(connection, schemaScript, cancellationToken).ConfigureAwait(false);
             await ValidateVaultDatabaseAsync(connection, cancellationToken).ConfigureAwait(false);
 
             return connection;
+        }
+        catch (SqliteException exception)
+        {
+            if (imagePointer != IntPtr.Zero)
+            {
+                sqlite3_free(imagePointer);
+            }
+
+            await connection.DisposeAsync().ConfigureAwait(false);
+            throw new InvalidDataException("SQLite vault database image could not be deserialized.", exception);
         }
         catch
         {
