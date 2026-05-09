@@ -9,5 +9,7 @@ public interface IVaultNodeWriter
 
     Task<bool> UpdateAsync(DbConnection connection, UpdateVaultNodeCommand node, CancellationToken cancellationToken);
 
+    Task<bool> ReorderAsync(DbConnection connection, ReorderVaultNodeCommand node, CancellationToken cancellationToken);
+
     Task DeleteAsync(DbConnection connection, DeleteVaultNodeCommand node, CancellationToken cancellationToken);
 }

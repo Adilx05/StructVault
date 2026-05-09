@@ -87,6 +87,9 @@ internal sealed class DesktopVaultSender : ISender
             UpdateVaultNodeCommand command => await new UpdateVaultNodeCommandHandler(nodeStore)
                 .Handle(command, cancellationToken)
                 .ConfigureAwait(false),
+            ReorderVaultNodeCommand command => await new ReorderVaultNodeCommandHandler(nodeStore)
+                .Handle(command, cancellationToken)
+                .ConfigureAwait(false),
             UpdateVaultFieldCommand command => await new UpdateVaultFieldCommandHandler(fieldStore)
                 .Handle(command, cancellationToken)
                 .ConfigureAwait(false),
@@ -224,6 +227,8 @@ internal sealed class DesktopVaultSender : ISender
             case GetVaultSchemaQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case UpdateVaultNodeCommand command:
+                return await Send(command, cancellationToken).ConfigureAwait(false);
+            case ReorderVaultNodeCommand command:
                 return await Send(command, cancellationToken).ConfigureAwait(false);
             case UpdateVaultFieldCommand command:
                 return await Send(command, cancellationToken).ConfigureAwait(false);
