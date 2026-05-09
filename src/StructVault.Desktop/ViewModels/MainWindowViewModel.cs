@@ -24,6 +24,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string? activeVaultFilePath;
     private string? activeVaultPassword;
     private VaultTreeNodeViewModel? selectedNode;
+    private bool isDirty;
 
     public MainWindowViewModel(ISender sender)
         : this(sender, new ContextMenuInputService())
@@ -86,6 +87,12 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool HasSelectedFields => selectedFields.Count > 0;
 
+    public bool IsDirty
+    {
+        get => isDirty;
+        private set => SetProperty(ref isDirty, value);
+    }
+
     public bool CanSave => CanSaveVault(null);
 
     public async Task LoadVaultTreeAsync(DbConnection connection, CancellationToken cancellationToken = default)
@@ -95,6 +102,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         activeConnection = connection;
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
+        SetClean();
         OnPropertyChanged(nameof(CanSave));
     }
 
@@ -159,6 +167,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         await sender.Send(
             new SaveQpsVaultFileCommand(connection, activeVaultFilePath, activeVaultPassword),
             cancellationToken).ConfigureAwait(true);
+        SetClean();
     }
 
     private async Task AddRootNodeAsync(object? parameter, CancellationToken cancellationToken)
@@ -175,6 +184,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         string nodeId = CreateEntityId();
         int sortOrder = GetNextRootNodeSortOrder();
         await sender.Send(new CreateVaultNodeCommand(connection, nodeId, null, name, sortOrder, now, now), cancellationToken).ConfigureAwait(true);
+        MarkDirty();
         await RefreshVaultTreeAsync(nodeId, cancellationToken).ConfigureAwait(true);
     }
 
@@ -193,6 +203,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         string nodeId = CreateEntityId();
         int sortOrder = parentNode.Children.Count == 0 ? 0 : parentNode.Children.Max(child => child.SortOrder) + 1;
         await sender.Send(new CreateVaultNodeCommand(connection, nodeId, parentNode.Id, name, sortOrder, now, now), cancellationToken).ConfigureAwait(true);
+        MarkDirty();
         await RefreshVaultTreeAsync(nodeId, cancellationToken).ConfigureAwait(true);
     }
 
@@ -210,6 +221,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         bool updated = await sender.Send(new UpdateVaultNodeCommand(connection, node.Id, name, node.SortOrder, DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(true);
         if (updated)
         {
+            MarkDirty();
             await RefreshVaultTreeAsync(node.Id, cancellationToken).ConfigureAwait(true);
         }
     }
@@ -224,6 +236,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         await sender.Send(new DeleteVaultNodeCommand(connection, node.Id), cancellationToken).ConfigureAwait(true);
+        MarkDirty();
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
     }
 
@@ -249,6 +262,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         await sender.Send(
             new CreateVaultFieldCommand(connection, CreateEntityId(), node.Id, field.Key, StrictUtf8.GetBytes(field.Value), sortOrder, now, now),
             cancellationToken).ConfigureAwait(true);
+        MarkDirty();
         await SelectVaultNodeAsync(node, cancellationToken).ConfigureAwait(true);
     }
 
@@ -272,6 +286,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             cancellationToken).ConfigureAwait(true);
         if (updated && SelectedNode is not null)
         {
+            MarkDirty();
             await SelectVaultNodeAsync(SelectedNode, cancellationToken).ConfigureAwait(true);
         }
     }
@@ -286,6 +301,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         await sender.Send(new DeleteVaultFieldCommand(connection, field.Id), cancellationToken).ConfigureAwait(true);
+        MarkDirty();
         if (SelectedNode is not null)
         {
             await SelectVaultNodeAsync(SelectedNode, cancellationToken).ConfigureAwait(true);
@@ -342,6 +358,16 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         selectedFields.Clear();
         OnPropertyChanged(nameof(HasSelectedFields));
+    }
+
+    private void MarkDirty()
+    {
+        IsDirty = true;
+    }
+
+    private void SetClean()
+    {
+        IsDirty = false;
     }
 
     private bool CanMutateVault(object? parameter)
