@@ -126,12 +126,12 @@
 
 ### Implementation
 - [x] Copy field value to clipboard
-- [ ] Auto-clear clipboard after configurable time
+- [x] Auto-clear clipboard after configurable time
 
 ### Tests
 - [x] Test: value copied correctly
-- [ ] Test: clipboard cleared after timeout
-- [ ] Test: disable auto-clear works
+- [x] Test: clipboard cleared after timeout
+- [x] Test: disable auto-clear works
 
 ---
 

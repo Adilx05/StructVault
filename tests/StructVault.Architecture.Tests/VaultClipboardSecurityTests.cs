@@ -23,7 +23,7 @@ public sealed class VaultClipboardSecurityTests
         VaultFieldRecord field = CreateField("field-password", "node-root", "Password", "correct horse battery staple");
         RecordingFieldReader fieldReader = new(field);
         RecordingClipboardService clipboardService = new();
-        CopyVaultFieldValueToClipboardCommandHandler handler = new(fieldReader, clipboardService);
+        CopyVaultFieldValueToClipboardCommandHandler handler = new(fieldReader, clipboardService, new RecordingClipboardAutoClearService());
 
         await handler.Handle(new CopyVaultFieldValueToClipboardCommand(connection, " field-password "), CancellationToken.None);
 
@@ -36,7 +36,7 @@ public sealed class VaultClipboardSecurityTests
     public async Task CopyVaultFieldValueToClipboardCommandHandlerRejectsMissingField()
     {
         await using SqliteConnection connection = await CreateOpenConnectionAsync();
-        CopyVaultFieldValueToClipboardCommandHandler handler = new(new RecordingFieldReader(null), new RecordingClipboardService());
+        CopyVaultFieldValueToClipboardCommandHandler handler = new(new RecordingFieldReader(null), new RecordingClipboardService(), new RecordingClipboardAutoClearService());
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await handler.Handle(new CopyVaultFieldValueToClipboardCommand(connection, "missing-field"), CancellationToken.None));
@@ -50,13 +50,101 @@ public sealed class VaultClipboardSecurityTests
         await using SqliteConnection connection = await CreateOpenConnectionAsync();
         VaultFieldRecord field = new("field-binary", "node-root", "Attachment", new byte[] { 0xFF, 0xFE, 0xFD }, 0, Timestamp, Timestamp);
         RecordingClipboardService clipboardService = new();
-        CopyVaultFieldValueToClipboardCommandHandler handler = new(new RecordingFieldReader(field), clipboardService);
+        CopyVaultFieldValueToClipboardCommandHandler handler = new(new RecordingFieldReader(field), clipboardService, new RecordingClipboardAutoClearService());
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await handler.Handle(new CopyVaultFieldValueToClipboardCommand(connection, "field-binary"), CancellationToken.None));
 
         Assert.Contains("UTF-8 text", exception.Message, StringComparison.Ordinal);
         Assert.Null(clipboardService.Text);
+    }
+
+
+    [Fact]
+    public async Task CopyVaultFieldValueToClipboardCommandHandlerSchedulesAutoClearWithConfiguredDelay()
+    {
+        await using SqliteConnection connection = await CreateOpenConnectionAsync();
+        VaultFieldRecord field = CreateField("field-token", "node-root", "Token", "temporary-secret");
+        RecordingClipboardService clipboardService = new();
+        RecordingClipboardAutoClearService autoClearService = new();
+        CopyVaultFieldValueToClipboardCommandHandler handler = new(new RecordingFieldReader(field), clipboardService, autoClearService);
+        TimeSpan configuredDelay = TimeSpan.FromSeconds(12);
+
+        await handler.Handle(
+            new CopyVaultFieldValueToClipboardCommand(connection, "field-token", autoClearEnabled: true, autoClearDelay: configuredDelay),
+            CancellationToken.None);
+
+        Assert.Equal("temporary-secret", clipboardService.Text);
+        Assert.Equal("temporary-secret", autoClearService.ScheduledText);
+        Assert.Equal(configuredDelay, autoClearService.ScheduledDelay);
+        Assert.False(autoClearService.CancelPendingClearCalled);
+    }
+
+    [Fact]
+    public async Task ClipboardAutoClearServiceClearsCopiedValueAfterTimeout()
+    {
+        RecordingClipboardService clipboardService = new();
+        ControllableClipboardClearDelay delay = new();
+        ClipboardAutoClearService autoClearService = new(clipboardService, delay);
+        await clipboardService.SetTextAsync("temporary-secret", CancellationToken.None);
+
+        await autoClearService.ScheduleClearAsync("temporary-secret", TimeSpan.FromSeconds(5), CancellationToken.None);
+        await delay.WaitForDelayRequestAsync();
+
+        Task? pendingClearTask = autoClearService.PendingClearTask;
+        Assert.NotNull(pendingClearTask);
+        delay.CompleteDelay();
+        await pendingClearTask!;
+
+        Assert.Null(clipboardService.Text);
+    }
+
+    [Fact]
+    public async Task ClipboardAutoClearServiceDoesNotClearClipboardChangedByAnotherProcess()
+    {
+        RecordingClipboardService clipboardService = new();
+        ControllableClipboardClearDelay delay = new();
+        ClipboardAutoClearService autoClearService = new(clipboardService, delay);
+        await clipboardService.SetTextAsync("temporary-secret", CancellationToken.None);
+
+        await autoClearService.ScheduleClearAsync("temporary-secret", TimeSpan.FromSeconds(5), CancellationToken.None);
+        await delay.WaitForDelayRequestAsync();
+        await clipboardService.SetTextAsync("other-application-value", CancellationToken.None);
+
+        Task? pendingClearTask = autoClearService.PendingClearTask;
+        Assert.NotNull(pendingClearTask);
+        delay.CompleteDelay();
+        await pendingClearTask!;
+
+        Assert.Equal("other-application-value", clipboardService.Text);
+    }
+
+    [Fact]
+    public async Task CopyVaultFieldValueToClipboardCommandHandlerDisablesAutoClearWhenRequested()
+    {
+        await using SqliteConnection connection = await CreateOpenConnectionAsync();
+        VaultFieldRecord field = CreateField("field-note", "node-root", "Note", "keep-on-clipboard");
+        RecordingClipboardAutoClearService autoClearService = new();
+        CopyVaultFieldValueToClipboardCommandHandler handler = new(
+            new RecordingFieldReader(field),
+            new RecordingClipboardService(),
+            autoClearService);
+
+        await handler.Handle(
+            new CopyVaultFieldValueToClipboardCommand(connection, "field-note", autoClearEnabled: false),
+            CancellationToken.None);
+
+        Assert.True(autoClearService.CancelPendingClearCalled);
+        Assert.Null(autoClearService.ScheduledText);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void CopyVaultFieldValueToClipboardCommandRejectsInvalidAutoClearDelay(int seconds)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new CopyVaultFieldValueToClipboardCommand(new SqliteConnection(), "field", autoClearDelay: TimeSpan.FromSeconds(seconds)));
     }
 
     [Theory]
@@ -89,6 +177,8 @@ public sealed class VaultClipboardSecurityTests
         CopyVaultFieldValueToClipboardCommand command = Assert.IsType<CopyVaultFieldValueToClipboardCommand>(sender.LastRequest);
         Assert.Same(connection, command.Connection);
         Assert.Equal("field-api-key", command.FieldId);
+        Assert.True(command.AutoClearEnabled);
+        Assert.Equal(CopyVaultFieldValueToClipboardCommand.DefaultAutoClearDelay, command.AutoClearDelay);
     }
 
     private static async Task<SqliteConnection> CreateOpenConnectionAsync()
@@ -112,6 +202,66 @@ public sealed class VaultClipboardSecurityTests
             cancellationToken.ThrowIfCancellationRequested();
             Text = text;
             return Task.CompletedTask;
+        }
+
+        public Task<string?> GetTextAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(Text);
+        }
+
+        public Task ClearAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Text = null;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingClipboardAutoClearService : IClipboardAutoClearService
+    {
+        public string? ScheduledText { get; private set; }
+
+        public TimeSpan? ScheduledDelay { get; private set; }
+
+        public bool CancelPendingClearCalled { get; private set; }
+
+        public Task ScheduleClearAsync(string copiedText, TimeSpan delay, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ScheduledText = copiedText;
+            ScheduledDelay = delay;
+            return Task.CompletedTask;
+        }
+
+        public Task CancelPendingClearAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CancelPendingClearCalled = true;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ControllableClipboardClearDelay : IClipboardClearDelay
+    {
+        private readonly TaskCompletionSource delayRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource delayCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task DelayAsync(TimeSpan delay, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            delayRequested.TrySetResult();
+            return delayCompleted.Task.WaitAsync(cancellationToken);
+        }
+
+        public Task WaitForDelayRequestAsync()
+        {
+            return delayRequested.Task;
+        }
+
+        public void CompleteDelay()
+        {
+            delayCompleted.TrySetResult();
         }
     }
 

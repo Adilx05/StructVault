@@ -35,6 +35,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private VaultTreeNodeViewModel? selectedNode;
     private string searchText = string.Empty;
     private SearchVaultFilter selectedSearchFilter = SearchVaultFilter.All;
+    private bool isClipboardAutoClearEnabled = true;
+    private TimeSpan clipboardAutoClearDelay = CopyVaultFieldValueToClipboardCommand.DefaultAutoClearDelay;
     private bool isDirty;
 
     public MainWindowViewModel(ISender sender)
@@ -112,6 +114,26 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasSearchResults => searchResults.Count > 0;
 
     public bool HasSearchText => SearchText.Length > 0;
+
+    public bool IsClipboardAutoClearEnabled
+    {
+        get => isClipboardAutoClearEnabled;
+        set => SetProperty(ref isClipboardAutoClearEnabled, value);
+    }
+
+    public TimeSpan ClipboardAutoClearDelay
+    {
+        get => clipboardAutoClearDelay;
+        set
+        {
+            if (value <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Clipboard auto-clear delay must be greater than zero.");
+            }
+
+            SetProperty(ref clipboardAutoClearDelay, value);
+        }
+    }
 
     public SearchVaultFilter SelectedSearchFilter
     {
@@ -443,7 +465,13 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         try
         {
-            await sender.Send(new CopyVaultFieldValueToClipboardCommand(connection, field.Id), cancellationToken).ConfigureAwait(true);
+            await sender.Send(
+                new CopyVaultFieldValueToClipboardCommand(
+                    connection,
+                    field.Id,
+                    IsClipboardAutoClearEnabled,
+                    ClipboardAutoClearDelay),
+                cancellationToken).ConfigureAwait(true);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
