@@ -147,6 +147,9 @@
                             <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
                                 <Setter Property="IsEnabled" Value="False" />
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
@@ -337,6 +340,9 @@
                             <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
                                 <Setter Property="IsEnabled" Value="False" />
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </GridSplitter.Style>
@@ -353,6 +359,9 @@
                         <Setter Property="IsEnabled" Value="True" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
                                 <Setter Property="IsEnabled" Value="False" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -441,6 +450,33 @@
                         </Border>
                     </ScrollViewer>
                 </Grid>
+            </Border>
+
+            <Border Grid.ColumnSpan="3"
+                    Background="#DFFFFFFF"
+                    BorderBrush="#FFB0B0B0"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel MaxWidth="360"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <mah:ProgressRing Width="56"
+                                      Height="56"
+                                      HorizontalAlignment="Center"
+                                      IsActive="{Binding IsLoading}" />
+                    <TextBlock Margin="0,16,0,0"
+                               HorizontalAlignment="Center"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Text="Working securely" />
+                    <TextBlock Margin="0,8,0,0"
+                               HorizontalAlignment="Center"
+                               Foreground="#FF555555"
+                               Text="{Binding LoadingStatusText}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                </StackPanel>
             </Border>
 
             <Border Grid.ColumnSpan="3"

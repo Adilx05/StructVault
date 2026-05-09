@@ -178,7 +178,7 @@
 
 - [x] Improve UI responsiveness
 - [x] Improve error handling
-- [ ] Add loading states
+- [x] Add loading states
 - [ ] Add basic logging
 
 ---
