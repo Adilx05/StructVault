@@ -76,7 +76,7 @@ public sealed class MainWindowLayoutTests
         XElement fieldValue = Assert.Single(fieldTemplate.Descendants(PresentationNamespace + "TextBox"));
 
         Assert.Equal("{Binding SelectedFields}", (string?)itemsControl.Attribute("ItemsSource"));
-        Assert.Equal("{Binding DisplayValue}", (string?)fieldValue.Attribute("Text"));
+        Assert.Equal("{Binding DisplayValue, Mode=OneWay}", (string?)fieldValue.Attribute("Text"));
         Assert.Equal("True", (string?)fieldValue.Attribute("IsReadOnly"));
         Assert.Equal("Wrap", (string?)fieldKey.Attribute("TextWrapping"));
     }
