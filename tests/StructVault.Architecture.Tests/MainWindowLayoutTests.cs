@@ -113,6 +113,25 @@ public sealed class MainWindowLayoutTests
 
 
     [Fact]
+    public void MainWindowConfiguresFieldDragDropEvents()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+        string codeBehind = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml.cs"));
+
+        XElement fieldsItemsControl = Assert.Single(mainWindow
+            .Descendants(PresentationNamespace + "ItemsControl")
+            .Where(element => (string?)element.Attribute(XamlNamespace + "Name") == "VaultFieldsItemsControl"));
+
+        Assert.Equal("{Binding SelectedFields}", (string?)fieldsItemsControl.Attribute("ItemsSource"));
+        Assert.Equal("True", (string?)fieldsItemsControl.Attribute("AllowDrop"));
+        Assert.Equal("VaultFieldsItemsControl_PreviewMouseLeftButtonDown", (string?)fieldsItemsControl.Attribute("PreviewMouseLeftButtonDown"));
+        Assert.Equal("VaultFieldsItemsControl_PreviewMouseMove", (string?)fieldsItemsControl.Attribute("PreviewMouseMove"));
+        Assert.Equal("VaultFieldsItemsControl_Drop", (string?)fieldsItemsControl.Attribute("Drop"));
+        Assert.Contains("ReorderVaultFieldAsync(sourceField, targetField)", codeBehind);
+        Assert.Contains("FindFieldViewModel", codeBehind);
+    }
+
+    [Fact]
     public void MainWindowDefaultConstructorConfiguresRunnableViewModel()
     {
         string codeBehind = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml.cs"));

@@ -186,5 +186,5 @@
 ## 🧪 Optional Enhancements
 
 - [x] Drag & drop node ordering
-- [ ] Field reordering (drag & drop)
+- [x] Field reordering (drag & drop)
 - [ ] Theme switching

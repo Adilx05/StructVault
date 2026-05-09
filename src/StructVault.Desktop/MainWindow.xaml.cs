@@ -22,7 +22,9 @@ public partial class MainWindow : MetroWindow
     private bool closeConfirmed;
     private bool closeConfirmationInProgress;
     private Point nodeDragStartPoint;
+    private Point fieldDragStartPoint;
     private VaultTreeNodeViewModel? draggedNode;
+    private VaultFieldViewModel? draggedField;
     private DateTimeOffset lastActivityReportUtc = DateTimeOffset.MinValue;
 
     public MainWindow()
@@ -242,6 +244,48 @@ public partial class MainWindow : MetroWindow
         }
     }
 
+    private void VaultFieldsItemsControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        fieldDragStartPoint = e.GetPosition(VaultFieldsItemsControl);
+        draggedField = FindFieldViewModel(e.OriginalSource as DependencyObject);
+    }
+
+    private void VaultFieldsItemsControl_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || draggedField is null)
+        {
+            return;
+        }
+
+        Point currentPosition = e.GetPosition(VaultFieldsItemsControl);
+        if (Math.Abs(currentPosition.X - fieldDragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(currentPosition.Y - fieldDragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        DragDrop.DoDragDrop(VaultFieldsItemsControl, draggedField, DragDropEffects.Move);
+        draggedField = null;
+    }
+
+    private async void VaultFieldsItemsControl_Drop(object sender, DragEventArgs e)
+    {
+        VaultFieldViewModel? sourceField = e.Data.GetData(typeof(VaultFieldViewModel)) as VaultFieldViewModel;
+        VaultFieldViewModel? targetField = FindFieldViewModel(e.OriginalSource as DependencyObject);
+        draggedField = null;
+
+        if (DataContext is not MainWindowViewModel viewModel || sourceField is null || targetField is null)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        bool reordered = await viewModel.ReorderVaultFieldAsync(sourceField, targetField).ConfigureAwait(true);
+        e.Effects = reordered ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
     private static VaultTreeNodeViewModel? FindTreeViewNode(DependencyObject? source)
     {
         DependencyObject? current = source;
@@ -250,6 +294,22 @@ public partial class MainWindow : MetroWindow
             if (current is TreeViewItem { DataContext: VaultTreeNodeViewModel node })
             {
                 return node;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static VaultFieldViewModel? FindFieldViewModel(DependencyObject? source)
+    {
+        DependencyObject? current = source;
+        while (current is not null)
+        {
+            if (current is FrameworkElement { DataContext: VaultFieldViewModel field })
+            {
+                return field;
             }
 
             current = VisualTreeHelper.GetParent(current);

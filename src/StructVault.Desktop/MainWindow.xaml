@@ -453,7 +453,12 @@
                                             </Style>
                                         </TextBlock.Style>
                                     </TextBlock>
-                                    <ItemsControl ItemsSource="{Binding SelectedFields}" />
+                                    <ItemsControl x:Name="VaultFieldsItemsControl"
+                                                  AllowDrop="True"
+                                                  Drop="VaultFieldsItemsControl_Drop"
+                                                  ItemsSource="{Binding SelectedFields}"
+                                                  PreviewMouseLeftButtonDown="VaultFieldsItemsControl_PreviewMouseLeftButtonDown"
+                                                  PreviewMouseMove="VaultFieldsItemsControl_PreviewMouseMove" />
                                 </StackPanel>
                             </Grid>
                         </Border>
