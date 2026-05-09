@@ -87,6 +87,11 @@
                        FontSize="24"
                        FontWeight="SemiBold"
                        Text="StructVault" />
+            <Button DockPanel.Dock="Right"
+                    MinWidth="96"
+                    Padding="12,6"
+                    Command="{Binding SaveVaultCommand}"
+                    Content="Save" />
             <TextBlock Margin="16,6,0,0"
                        VerticalAlignment="Center"
                        Foreground="#FF666666"

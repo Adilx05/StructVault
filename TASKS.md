@@ -96,7 +96,7 @@
 ## 💾 Phase 7 – Save / Load Workflow
 
 ### Implementation
-- [ ] Implement manual save system
+- [x] Implement manual save system
 - [ ] Implement dirty flag tracking
 - [ ] Prompt user on exit if unsaved changes exist
 - [ ] Create `.bak` backup before overwrite

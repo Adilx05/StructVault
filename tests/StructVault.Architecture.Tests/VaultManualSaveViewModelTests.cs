@@ -1,0 +1,102 @@
+using MediatR;
+using Microsoft.Data.Sqlite;
+using StructVault.Application.Persistence;
+using StructVault.Application.Qps;
+using StructVault.Desktop.Commands;
+using StructVault.Desktop.ViewModels;
+using Xunit;
+
+namespace StructVault.Architecture.Tests;
+
+public sealed class VaultManualSaveViewModelTests
+{
+    [Fact]
+    public async Task SaveCommandDispatchesManualSaveCommandWhenTargetIsConfigured()
+    {
+        RecordingSender sender = new();
+        MainWindowViewModel viewModel = new(sender);
+        await using SqliteConnection connection = new("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await viewModel.LoadVaultTreeAsync(connection, "vault.qps", "save-password");
+
+        Assert.True(viewModel.CanSave);
+        Assert.True(viewModel.SaveVaultCommand.CanExecute(null));
+
+        await ((AsyncCommand)viewModel.SaveVaultCommand).ExecuteAsync();
+
+        SaveQpsVaultFileCommand command = Assert.Single(sender.Requests.OfType<SaveQpsVaultFileCommand>());
+        Assert.Same(connection, command.Connection);
+        Assert.Equal("vault.qps", command.FilePath);
+        Assert.Equal("save-password", command.Password);
+    }
+
+    [Fact]
+    public async Task SaveCommandIsDisabledUntilManualSaveTargetIsConfigured()
+    {
+        RecordingSender sender = new();
+        MainWindowViewModel viewModel = new(sender);
+        await using SqliteConnection connection = new("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await viewModel.LoadVaultTreeAsync(connection);
+
+        Assert.False(viewModel.CanSave);
+        Assert.False(viewModel.SaveVaultCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ConfigureManualSaveTargetRejectsBlankPassword()
+    {
+        MainWindowViewModel viewModel = new(new RecordingSender());
+
+        Assert.Throws<ArgumentException>(() => viewModel.ConfigureManualSaveTarget("vault.qps", " "));
+    }
+
+    private sealed class RecordingSender : ISender
+    {
+        public List<object> Requests { get; } = new();
+
+        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (request is ListVaultNodeHierarchyQuery)
+            {
+                object response = Array.Empty<VaultNodeHierarchyRecord>();
+                return Task.FromResult((TResponse)response);
+            }
+
+            throw new InvalidOperationException($"Unexpected request type '{request.GetType().Name}'.");
+        }
+
+        public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default)
+            where TRequest : IRequest
+        {
+            Requests.Add(request);
+            return Task.CompletedTask;
+        }
+
+        public Task<object?> Send(object request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (request is ListVaultNodeHierarchyQuery)
+            {
+                return Task.FromResult<object?>(Array.Empty<VaultNodeHierarchyRecord>());
+            }
+
+            return Task.FromResult<object?>(null);
+        }
+
+        public IAsyncEnumerable<TResponse> CreateStream<TResponse>(
+            IStreamRequest<TResponse> request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Manual save view model tests do not use streaming requests.");
+        }
+
+        public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Manual save view model tests do not use streaming requests.");
+        }
+    }
+}

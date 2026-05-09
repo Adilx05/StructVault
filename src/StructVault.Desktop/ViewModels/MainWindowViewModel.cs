@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Input;
 using MediatR;
 using StructVault.Application.Persistence;
+using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
 
 namespace StructVault.Desktop.ViewModels;
@@ -20,6 +21,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly ReadOnlyObservableCollection<VaultTreeNodeViewModel> readOnlyVaultNodes;
     private readonly ReadOnlyObservableCollection<VaultFieldViewModel> readOnlySelectedFields;
     private DbConnection? activeConnection;
+    private string? activeVaultFilePath;
+    private string? activeVaultPassword;
     private VaultTreeNodeViewModel? selectedNode;
 
     public MainWindowViewModel(ISender sender)
@@ -34,6 +37,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         readOnlyVaultNodes = new ReadOnlyObservableCollection<VaultTreeNodeViewModel>(vaultNodes);
         readOnlySelectedFields = new ReadOnlyObservableCollection<VaultFieldViewModel>(selectedFields);
 
+        SaveVaultCommand = new AsyncCommand((parameter, cancellationToken) => SaveVaultAsync(parameter, cancellationToken), CanSaveVault);
         AddRootNodeCommand = new AsyncCommand(AddRootNodeAsync, CanMutateVault);
         AddChildNodeCommand = new AsyncCommand(AddChildNodeAsync, CanMutateNode);
         RenameNodeCommand = new AsyncCommand(RenameNodeAsync, CanMutateNode);
@@ -46,6 +50,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ReadOnlyObservableCollection<VaultTreeNodeViewModel> VaultNodes => readOnlyVaultNodes;
 
     public ReadOnlyObservableCollection<VaultFieldViewModel> SelectedFields => readOnlySelectedFields;
+
+    public ICommand SaveVaultCommand { get; }
 
     public ICommand AddRootNodeCommand { get; }
 
@@ -80,6 +86,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool HasSelectedFields => selectedFields.Count > 0;
 
+    public bool CanSave => CanSaveVault(null);
+
     public async Task LoadVaultTreeAsync(DbConnection connection, CancellationToken cancellationToken = default)
     {
         RequireOpenConnection(connection);
@@ -87,6 +95,35 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         activeConnection = connection;
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
+        OnPropertyChanged(nameof(CanSave));
+    }
+
+    public async Task LoadVaultTreeAsync(DbConnection connection, string vaultFilePath, string password, CancellationToken cancellationToken = default)
+    {
+        ConfigureManualSaveTarget(vaultFilePath, password);
+        await LoadVaultTreeAsync(connection, cancellationToken).ConfigureAwait(true);
+    }
+
+    public void ConfigureManualSaveTarget(string vaultFilePath, string password)
+    {
+        if (string.IsNullOrWhiteSpace(vaultFilePath))
+        {
+            throw new ArgumentException("A QPS vault file path is required for manual save.", nameof(vaultFilePath));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("A non-empty password is required for manual save.", nameof(password));
+        }
+
+        activeVaultFilePath = vaultFilePath;
+        activeVaultPassword = password;
+        OnPropertyChanged(nameof(CanSave));
+    }
+
+    public async Task SaveVaultAsync(CancellationToken cancellationToken = default)
+    {
+        await SaveVaultAsync(null, cancellationToken).ConfigureAwait(true);
     }
 
     public async Task SelectVaultNodeAsync(VaultTreeNodeViewModel? node, CancellationToken cancellationToken = default)
@@ -109,6 +146,19 @@ public sealed class MainWindowViewModel : ViewModelBase
             .ConfigureAwait(true);
 
         ReplaceSelectedFields(fields);
+    }
+
+    private async Task SaveVaultAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        if (string.IsNullOrWhiteSpace(activeVaultFilePath) || string.IsNullOrWhiteSpace(activeVaultPassword))
+        {
+            throw new InvalidOperationException("A vault file path and password must be configured before manual save.");
+        }
+
+        await sender.Send(
+            new SaveQpsVaultFileCommand(connection, activeVaultFilePath, activeVaultPassword),
+            cancellationToken).ConfigureAwait(true);
     }
 
     private async Task AddRootNodeAsync(object? parameter, CancellationToken cancellationToken)
@@ -297,6 +347,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool CanMutateVault(object? parameter)
     {
         return activeConnection?.State == ConnectionState.Open;
+    }
+
+    private bool CanSaveVault(object? parameter)
+    {
+        return CanMutateVault(parameter) &&
+            !string.IsNullOrWhiteSpace(activeVaultFilePath) &&
+            !string.IsNullOrWhiteSpace(activeVaultPassword);
     }
 
     private bool CanMutateNode(object? parameter)
