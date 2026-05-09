@@ -136,6 +136,14 @@
                                     Padding="10,4"
                                     Command="{Binding SearchVaultCommand}"
                                     Content="Search" />
+                            <ComboBox DockPanel.Dock="Right"
+                                      Width="84"
+                                      Margin="8,0,0,0"
+                                      DisplayMemberPath="DisplayName"
+                                      ItemsSource="{Binding SearchFilterOptions}"
+                                      SelectedValue="{Binding SelectedSearchFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Value"
+                                      ToolTip="Limit search results by type" />
                             <TextBox VerticalContentAlignment="Center"
                                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="Search all vault nodes and fields" />

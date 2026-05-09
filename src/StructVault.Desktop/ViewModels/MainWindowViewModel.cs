@@ -13,6 +13,12 @@ namespace StructVault.Desktop.ViewModels;
 public sealed class MainWindowViewModel : ViewModelBase
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+    private static readonly IReadOnlyList<VaultSearchFilterOption> AvailableSearchFilterOptions =
+    [
+        new(SearchVaultFilter.All, "All"),
+        new(SearchVaultFilter.Nodes, "Nodes"),
+        new(SearchVaultFilter.Fields, "Fields")
+    ];
 
     private readonly ISender sender;
     private readonly IContextMenuInputService contextMenuInputService;
@@ -27,6 +33,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string? activeVaultPassword;
     private VaultTreeNodeViewModel? selectedNode;
     private string searchText = string.Empty;
+    private SearchVaultFilter selectedSearchFilter = SearchVaultFilter.All;
     private bool isDirty;
 
     public MainWindowViewModel(ISender sender)
@@ -58,6 +65,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ReadOnlyObservableCollection<VaultFieldViewModel> SelectedFields => readOnlySelectedFields;
 
     public ReadOnlyObservableCollection<VaultSearchResultViewModel> SearchResults => readOnlySearchResults;
+
+    public IReadOnlyList<VaultSearchFilterOption> SearchFilterOptions => AvailableSearchFilterOptions;
 
     public ICommand SaveVaultCommand { get; }
 
@@ -99,6 +108,23 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasSearchResults => searchResults.Count > 0;
 
     public bool HasSearchText => SearchText.Length > 0;
+
+    public SearchVaultFilter SelectedSearchFilter
+    {
+        get => selectedSearchFilter;
+        set
+        {
+            if (!Enum.IsDefined(typeof(SearchVaultFilter), value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Vault search filter is not supported.");
+            }
+
+            if (SetProperty(ref selectedSearchFilter, value) && HasSearchText && activeConnection?.State == ConnectionState.Open)
+            {
+                ClearSearchResults();
+            }
+        }
+    }
 
     public string SearchStatusText => HasSearchText
         ? $"{searchResults.Count} search result{(searchResults.Count == 1 ? string.Empty : "s")}"
@@ -158,6 +184,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         activeConnection = connection;
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
         SearchText = string.Empty;
+        SelectedSearchFilter = SearchVaultFilter.All;
         ClearSearchResults();
         SetClean();
         OnPropertyChanged(nameof(CanSave));
@@ -204,7 +231,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         IReadOnlyList<VaultSearchResultRecord> results = await sender
-            .Send(new SearchVaultQuery(connection, normalizedSearchText), cancellationToken)
+            .Send(new SearchVaultQuery(connection, normalizedSearchText, SelectedSearchFilter), cancellationToken)
             .ConfigureAwait(true);
 
         ReplaceSearchResults(results);
