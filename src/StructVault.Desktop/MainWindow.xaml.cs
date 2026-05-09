@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using MahApps.Metro.Controls;
 using StructVault.Application.Persistence;
@@ -8,6 +9,9 @@ namespace StructVault.Desktop;
 
 public partial class MainWindow : MetroWindow
 {
+    private bool closeConfirmed;
+    private bool closeConfirmationInProgress;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -18,12 +22,14 @@ public partial class MainWindow : MetroWindow
     {
         InitializeComponent();
         DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        Closing += MainWindowClosing;
     }
 
     private void ConfigureDefaultViewModel()
     {
         DesktopVaultSender sender = new();
         DataContext = new MainWindowViewModel(sender);
+        Closing += MainWindowClosing;
         Loaded += async (_, _) => await LoadInitialVaultAsync(sender).ConfigureAwait(true);
     }
 
@@ -38,6 +44,35 @@ public partial class MainWindow : MetroWindow
             .Send(new CreateInMemoryVaultDatabaseCommand(), CancellationToken.None)
             .ConfigureAwait(true);
         await viewModel.LoadVaultTreeAsync(connection).ConfigureAwait(true);
+    }
+
+    private async void MainWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (closeConfirmed || DataContext is not MainWindowViewModel viewModel || !viewModel.IsDirty)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (closeConfirmationInProgress)
+        {
+            return;
+        }
+
+        closeConfirmationInProgress = true;
+        try
+        {
+            bool shouldClose = await viewModel.ConfirmExitAsync().ConfigureAwait(true);
+            if (shouldClose)
+            {
+                closeConfirmed = true;
+                Close();
+            }
+        }
+        finally
+        {
+            closeConfirmationInProgress = false;
+        }
     }
 
     private async void VaultTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

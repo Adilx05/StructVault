@@ -98,7 +98,7 @@
 ### Implementation
 - [x] Implement manual save system
 - [x] Implement dirty flag tracking
-- [ ] Prompt user on exit if unsaved changes exist
+- [x] Prompt user on exit if unsaved changes exist
 - [ ] Create `.bak` backup before overwrite
 
 ### Tests

@@ -8,5 +8,7 @@ public interface IContextMenuInputService
 
     bool ConfirmDelete(string title, string message);
 
+    UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave);
+
     void ShowValidationError(string title, string message);
 }
