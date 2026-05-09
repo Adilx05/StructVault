@@ -4,6 +4,7 @@ public static class VaultSchema
 {
     public const string VaultNodeTableName = "VaultNode";
     public const string VaultFieldTableName = "VaultField";
+    public const string VaultSettingTableName = "VaultSetting";
 
     public const string CreateScript = """
         PRAGMA foreign_keys = ON;
@@ -37,5 +38,11 @@ public static class VaultSchema
 
         CREATE INDEX IF NOT EXISTS IX_VaultField_NodeId_SortOrder
             ON VaultField (NodeId, SortOrder, Id);
+
+        CREATE TABLE IF NOT EXISTS VaultSetting (
+            Name TEXT NOT NULL PRIMARY KEY CHECK (length(trim(Name)) > 0),
+            Value TEXT NOT NULL CHECK (length(trim(Value)) > 0),
+            UpdatedAtUtc TEXT NOT NULL CHECK (length(trim(UpdatedAtUtc)) > 0)
+        );
         """;
 }

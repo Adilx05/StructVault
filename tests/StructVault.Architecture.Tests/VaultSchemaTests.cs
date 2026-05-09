@@ -36,6 +36,17 @@ public sealed class VaultSchemaTests
     }
 
     [Fact]
+    public void SchemaDefinesVaultSettingTableForEncryptedSettingsPersistence()
+    {
+        string schema = VaultSchema.CreateScript;
+
+        Assert.Contains("CREATE TABLE IF NOT EXISTS VaultSetting", schema, StringComparison.Ordinal);
+        Assert.Contains("Name TEXT NOT NULL PRIMARY KEY CHECK (length(trim(Name)) > 0)", schema, StringComparison.Ordinal);
+        Assert.Contains("Value TEXT NOT NULL CHECK (length(trim(Value)) > 0)", schema, StringComparison.Ordinal);
+        Assert.Contains("UpdatedAtUtc TEXT NOT NULL CHECK (length(trim(UpdatedAtUtc)) > 0)", schema, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SchemaDefinesOrderingIndexesForNodesAndFields()
     {
         string schema = VaultSchema.CreateScript;

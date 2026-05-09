@@ -101,6 +101,7 @@ public sealed class SqliteVaultDatabaseSerializer : IVaultDatabaseSerializer
             imagePointer = IntPtr.Zero;
 
             await ExecuteNonQueryAsync(connection, "PRAGMA foreign_keys = ON;", cancellationToken).ConfigureAwait(false);
+            await ExecuteNonQueryAsync(connection, EnsureSchemaConfigured(), cancellationToken).ConfigureAwait(false);
             await ValidateVaultDatabaseAsync(connection, cancellationToken).ConfigureAwait(false);
 
             return connection;
@@ -147,7 +148,8 @@ public sealed class SqliteVaultDatabaseSerializer : IVaultDatabaseSerializer
 
             bool hasNodeTable = await TableExistsAsync(connection, VaultSchema.VaultNodeTableName, cancellationToken).ConfigureAwait(false);
             bool hasFieldTable = await TableExistsAsync(connection, VaultSchema.VaultFieldTableName, cancellationToken).ConfigureAwait(false);
-            if (!hasNodeTable || !hasFieldTable)
+            bool hasSettingTable = await TableExistsAsync(connection, VaultSchema.VaultSettingTableName, cancellationToken).ConfigureAwait(false);
+            if (!hasNodeTable || !hasFieldTable || !hasSettingTable)
             {
                 throw new InvalidDataException("SQLite vault database image does not contain the required vault schema.");
             }

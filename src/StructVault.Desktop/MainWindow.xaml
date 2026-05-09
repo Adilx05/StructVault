@@ -131,6 +131,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -195,8 +196,50 @@
                         </ListBox>
                     </StackPanel>
 
+
+                    <Border Grid.Row="2"
+                            Margin="0,0,0,10"
+                            Padding="10"
+                            Background="White"
+                            BorderBrush="#FFE1E1E1"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Clipboard settings" />
+                            <CheckBox Margin="0,8,0,0"
+                                      Content="Auto-clear copied field values"
+                                      IsChecked="{Binding IsClipboardAutoClearEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <DockPanel Margin="0,8,0,0"
+                                       LastChildFill="True">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Text="Clear after" />
+                                <TextBlock DockPanel.Dock="Right"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Text="seconds" />
+                                <mah:NumericUpDown Minimum="1"
+                                                   Interval="1"
+                                                   NumericInputMode="Numbers"
+                                                   Value="{Binding ClipboardAutoClearDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   ToolTip="Positive whole seconds before StructVault clears an unchanged copied value" />
+                            </DockPanel>
+                            <Button Margin="0,8,0,0"
+                                    Padding="10,4"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding ApplyClipboardSettingsCommand}"
+                                    Content="Apply settings" />
+                            <TextBlock Margin="0,6,0,0"
+                                       Foreground="#FF666666"
+                                       Text="{Binding ClipboardSettingsStatusText}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
                     <TreeView x:Name="VaultTreeView"
-                              Grid.Row="2"
+                              Grid.Row="3"
                               ItemsSource="{Binding VaultNodes}"
                               BorderThickness="0"
                               SelectedItemChanged="VaultTreeView_SelectedItemChanged"

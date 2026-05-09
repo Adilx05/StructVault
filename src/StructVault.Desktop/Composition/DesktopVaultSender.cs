@@ -15,6 +15,7 @@ internal sealed class DesktopVaultSender : ISender
 {
     private readonly SqliteVaultNodeWriter nodeStore = new();
     private readonly SqliteVaultFieldWriter fieldStore = new();
+    private readonly SqliteVaultSettingStore settingStore = new();
     private readonly SqliteVaultDatabaseSerializer databaseSerializer;
     private readonly Argon2idKeyDerivationService keyDerivationService = new();
     private readonly Aes256GcmEncryptionService encryptionService = new();
@@ -54,6 +55,9 @@ internal sealed class DesktopVaultSender : ISender
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
             SearchVaultQuery query => await new SearchVaultQueryHandler(nodeStore, fieldStore)
+                .Handle(query, cancellationToken)
+                .ConfigureAwait(false),
+            GetClipboardSettingsQuery query => await new GetClipboardSettingsQueryHandler(settingStore)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
             GetVaultNodeByIdQuery query => await new GetVaultNodeByIdQueryHandler(nodeStore)
@@ -137,6 +141,11 @@ internal sealed class DesktopVaultSender : ISender
                     .Handle(command, cancellationToken)
                     .ConfigureAwait(false);
                 break;
+            case SaveClipboardSettingsCommand command:
+                await new SaveClipboardSettingsCommandHandler(settingStore)
+                    .Handle(command, cancellationToken)
+                    .ConfigureAwait(false);
+                break;
             case SaveQpsVaultFileCommand command:
                 await new SaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, backupService, fileWriter)
                     .Handle(command, cancellationToken)
@@ -174,6 +183,8 @@ internal sealed class DesktopVaultSender : ISender
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case SearchVaultQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
+            case GetClipboardSettingsQuery query:
+                return await Send(query, cancellationToken).ConfigureAwait(false);
             case GetVaultNodeByIdQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case ListVaultFieldsByNodeIdQuery query:
@@ -188,6 +199,9 @@ internal sealed class DesktopVaultSender : ISender
                 return await Send(command, cancellationToken).ConfigureAwait(false);
             case ReorderVaultFieldCommand command:
                 return await Send(command, cancellationToken).ConfigureAwait(false);
+            case SaveClipboardSettingsCommand command:
+                await Send(command, cancellationToken).ConfigureAwait(false);
+                return null;
             case CreateQpsVaultFileCommand command:
                 return await Send(command, cancellationToken).ConfigureAwait(false);
             case OpenQpsVaultFileQuery query:
