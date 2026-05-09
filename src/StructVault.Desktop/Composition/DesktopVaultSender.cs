@@ -1,8 +1,10 @@
 using MediatR;
+using StructVault.Application.Clipboard;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
 using StructVault.Infrastructure.Security;
 using StructVault.Infrastructure.Storage;
+using StructVault.Desktop.Services;
 using StructVault.Persistence.Database;
 using StructVault.Persistence.Schema;
 
@@ -18,6 +20,7 @@ internal sealed class DesktopVaultSender : ISender
     private readonly FileSystemQpsFileReader fileReader = new();
     private readonly FileSystemQpsFileBackupService backupService = new();
     private readonly FileSystemQpsFileWriter fileWriter = new();
+    private readonly WpfClipboardService clipboardService = new();
 
     public DesktopVaultSender()
     {
@@ -112,6 +115,9 @@ internal sealed class DesktopVaultSender : ISender
                 break;
             case DeleteVaultFieldCommand command:
                 await new DeleteVaultFieldCommandHandler(fieldStore).Handle(command, cancellationToken).ConfigureAwait(false);
+                break;
+            case CopyVaultFieldValueToClipboardCommand command:
+                await new CopyVaultFieldValueToClipboardCommandHandler(fieldStore, clipboardService).Handle(command, cancellationToken).ConfigureAwait(false);
                 break;
             case SaveQpsVaultFileCommand command:
                 await new SaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, backupService, fileWriter)

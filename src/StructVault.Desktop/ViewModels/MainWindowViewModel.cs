@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Text;
 using System.Windows.Input;
 using MediatR;
+using StructVault.Application.Clipboard;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
@@ -58,6 +59,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         AddFieldCommand = new AsyncCommand(AddFieldAsync, CanMutateNode);
         EditFieldCommand = new AsyncCommand(EditFieldAsync, CanMutateField);
         DeleteFieldCommand = new AsyncCommand(DeleteFieldAsync, CanMutateField);
+        CopyFieldValueCommand = new AsyncCommand(CopyFieldValueAsync, CanMutateField);
     }
 
     public ReadOnlyObservableCollection<VaultTreeNodeViewModel> VaultNodes => readOnlyVaultNodes;
@@ -85,6 +87,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand EditFieldCommand { get; }
 
     public ICommand DeleteFieldCommand { get; }
+
+    public ICommand CopyFieldValueCommand { get; }
 
     public VaultTreeNodeViewModel? SelectedNode
     {
@@ -429,6 +433,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             MarkDirty();
             await SelectVaultNodeAsync(SelectedNode, cancellationToken).ConfigureAwait(true);
+        }
+    }
+
+    private async Task CopyFieldValueAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        VaultFieldViewModel field = RequireFieldParameter(parameter);
+        DbConnection connection = RequireActiveOpenConnection();
+
+        try
+        {
+            await sender.Send(new CopyVaultFieldValueToClipboardCommand(connection, field.Id), cancellationToken).ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            contextMenuInputService.ShowValidationError("Copy failed", "The field value could not be copied. " + ex.Message);
         }
     }
 

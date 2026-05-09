@@ -125,11 +125,11 @@
 ## 📋 Phase 9 – Clipboard Security
 
 ### Implementation
-- [ ] Copy field value to clipboard
+- [x] Copy field value to clipboard
 - [ ] Auto-clear clipboard after configurable time
 
 ### Tests
-- [ ] Test: value copied correctly
+- [x] Test: value copied correctly
 - [ ] Test: clipboard cleared after timeout
 - [ ] Test: disable auto-clear works
 
