@@ -17,19 +17,19 @@
             <TextBlock Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}"
                        Text="{Binding Name}">
                 <TextBlock.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Command="{Binding PlacementTarget.Tag.AddChildNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}"
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Command="{Binding AddChildNodeCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Add child node" />
-                        <MenuItem Command="{Binding PlacementTarget.Tag.RenameNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}"
+                        <MenuItem Command="{Binding RenameNodeCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Rename node" />
-                        <MenuItem Command="{Binding PlacementTarget.Tag.AddFieldCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}"
+                        <MenuItem Command="{Binding AddFieldCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Add field" />
                         <Separator />
-                        <MenuItem Command="{Binding PlacementTarget.Tag.DeleteNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}"
+                        <MenuItem Command="{Binding DeleteNodeCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Delete node" />
                     </ContextMenu>
                 </TextBlock.ContextMenu>
@@ -44,12 +44,12 @@
                     CornerRadius="4"
                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
                 <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Command="{Binding PlacementTarget.Tag.EditFieldCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}"
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Command="{Binding EditFieldCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Edit field" />
-                        <MenuItem Command="{Binding PlacementTarget.Tag.DeleteFieldCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}"
+                        <MenuItem Command="{Binding DeleteFieldCommand}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Header="Delete field" />
                     </ContextMenu>
                 </Border.ContextMenu>
@@ -136,8 +136,8 @@
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               Tag="{Binding}">
                         <TreeView.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Command="{Binding PlacementTarget.Tag.AddRootNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <MenuItem Command="{Binding AddRootNodeCommand}"
                                           Header="Add root node" />
                             </ContextMenu>
                         </TreeView.ContextMenu>
