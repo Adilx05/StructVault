@@ -103,19 +103,7 @@
         </DockPanel>
 
         <Grid Grid.Row="1">
-            <Grid>
-                <Grid.Style>
-                    <Style TargetType="Grid">
-                        <Setter Property="IsEnabled" Value="True" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
-
-                <Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"
                                   MinWidth="240" />
                 <ColumnDefinition Width="8" />
@@ -129,6 +117,16 @@
                     BorderBrush="#FFD6D6D6"
                     BorderThickness="1"
                     CornerRadius="4">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -222,7 +220,18 @@
                           VerticalAlignment="Stretch"
                           Background="Transparent"
                           ResizeBehavior="PreviousAndNext"
-                          ResizeDirection="Columns" />
+                          ResizeDirection="Columns">
+                <GridSplitter.Style>
+                    <Style TargetType="GridSplitter">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </GridSplitter.Style>
+            </GridSplitter>
 
             <Border Grid.Column="2"
                     Padding="16"
@@ -230,6 +239,16 @@
                     BorderBrush="#FFD6D6D6"
                     BorderThickness="1"
                     CornerRadius="4">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -314,9 +333,9 @@
                     </ScrollViewer>
                 </Grid>
             </Border>
-            </Grid>
 
-            <Border Background="#EFFFFFFF"
+            <Border Grid.ColumnSpan="3"
+                    Background="#EFFFFFFF"
                     BorderBrush="#FFB0B0B0"
                     BorderThickness="1"
                     CornerRadius="4"
