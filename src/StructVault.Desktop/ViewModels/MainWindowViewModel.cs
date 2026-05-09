@@ -45,8 +45,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     private TimeSpan idleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
     private string idleLockSettingsStatusText = "Idle lock settings use secure defaults.";
     private string vaultErrorMessage = string.Empty;
+    private string loadingStatusText = "Ready.";
     private bool isVaultLocked;
     private bool isDirty;
+    private bool isLoading;
+    private int loadingScopeDepth;
 
     public MainWindowViewModel(ISender sender)
         : this(sender, new ContextMenuInputService())
@@ -314,6 +317,34 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool HasVaultError => VaultErrorMessage.Length > 0;
 
+    public bool IsLoading
+    {
+        get => isLoading;
+        private set
+        {
+            if (SetProperty(ref isLoading, value))
+            {
+                OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(CanUnlock));
+                RaiseCommandCanExecuteChanged();
+            }
+        }
+    }
+
+    public string LoadingStatusText
+    {
+        get => loadingStatusText;
+        private set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ArgumentException("A loading status message is required.", nameof(value));
+            }
+
+            SetProperty(ref loadingStatusText, value.Trim());
+        }
+    }
+
     public bool CanSave => CanSaveVault(null);
 
     public bool CanUnlock => CanUnlockVault(null);
@@ -395,6 +426,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         RequireOpenConnection(connection);
         cancellationToken.ThrowIfCancellationRequested();
 
+        using IDisposable loadingScope = BeginLoading("Loading vault...");
         activeConnection = connection;
         ClearVaultError();
         IsVaultLocked = false;
@@ -442,6 +474,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        using IDisposable loadingScope = BeginLoading("Searching vault...");
         DbConnection connection = RequireActiveOpenConnection();
         string normalizedSearchText = SearchText.Trim();
         if (normalizedSearchText.Length == 0)
@@ -487,6 +520,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Loading fields...");
         DbConnection connection = RequireActiveOpenConnection();
         SelectedNode = node;
         ClearSelectedFields();
@@ -523,6 +557,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return false;
         }
 
+        using IDisposable loadingScope = BeginLoading("Unlocking vault...");
         bool unlocked = await sender
             .Send(new UnlockVaultCommand(activeVaultFilePath, password), cancellationToken)
             .ConfigureAwait(true);
@@ -575,6 +610,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             throw new InvalidOperationException("A vault file path and password must be configured before manual save.");
         }
 
+        using IDisposable loadingScope = BeginLoading("Saving vault...");
         VaultOperationResult result = await sender.Send(
             new TrySaveQpsVaultFileCommand(connection, activeVaultFilePath, activeVaultPassword),
             cancellationToken).ConfigureAwait(true);
@@ -599,6 +635,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Adding node...");
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string nodeId = CreateEntityId();
         int sortOrder = GetNextRootNodeSortOrder();
@@ -618,6 +655,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Adding node...");
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string nodeId = CreateEntityId();
         int sortOrder = parentNode.Children.Count == 0 ? 0 : parentNode.Children.Max(child => child.SortOrder) + 1;
@@ -637,6 +675,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Renaming node...");
         bool updated = await sender.Send(new UpdateVaultNodeCommand(connection, node.Id, name, node.SortOrder, DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(true);
         if (updated)
         {
@@ -654,6 +693,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Deleting node...");
         await sender.Send(new DeleteVaultNodeCommand(connection, node.Id), cancellationToken).ConfigureAwait(true);
         MarkDirty();
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
@@ -673,6 +713,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Adding field...");
         IReadOnlyList<VaultFieldRecord> existingFields = await sender
             .Send(new ListVaultFieldsByNodeIdQuery(connection, node.Id), cancellationToken)
             .ConfigureAwait(true);
@@ -700,6 +741,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Updating field...");
         bool updated = await sender.Send(
             new UpdateVaultFieldCommand(connection, field.Id, normalizedField.Key, StrictUtf8.GetBytes(normalizedField.Value), field.SortOrder, DateTimeOffset.UtcNow),
             cancellationToken).ConfigureAwait(true);
@@ -715,6 +757,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         DbConnection connection = RequireActiveOpenConnection();
         try
         {
+            using IDisposable loadingScope = BeginLoading("Saving clipboard settings...");
             await sender.Send(
                 new SaveClipboardSettingsCommand(connection, IsClipboardAutoClearEnabled, ClipboardAutoClearDelay),
                 cancellationToken).ConfigureAwait(true);
@@ -732,6 +775,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         DbConnection connection = RequireActiveOpenConnection();
         try
         {
+            using IDisposable loadingScope = BeginLoading("Saving idle lock settings...");
             await sender.Send(
                 new SaveIdleLockSettingsCommand(connection, IsIdleLockEnabled, IdleLockTimeout),
                 cancellationToken).ConfigureAwait(true);
@@ -751,6 +795,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         try
         {
+            using IDisposable loadingScope = BeginLoading("Copying field value...");
             await sender.Send(
                 new CopyVaultFieldValueToClipboardCommand(
                     connection,
@@ -814,6 +859,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        using IDisposable loadingScope = BeginLoading("Deleting field...");
         await sender.Send(new DeleteVaultFieldCommand(connection, field.Id), cancellationToken).ConfigureAwait(true);
         MarkDirty();
         if (SelectedNode is not null)
@@ -954,6 +1000,34 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaiseCommandCanExecuteChanged();
     }
 
+    private IDisposable BeginLoading(string statusText)
+    {
+        if (string.IsNullOrWhiteSpace(statusText))
+        {
+            throw new ArgumentException("A loading status message is required.", nameof(statusText));
+        }
+
+        loadingScopeDepth++;
+        LoadingStatusText = statusText;
+        IsLoading = true;
+        return new LoadingScope(this);
+    }
+
+    private void EndLoading()
+    {
+        if (loadingScopeDepth <= 0)
+        {
+            throw new InvalidOperationException("Cannot end a loading state that has not started.");
+        }
+
+        loadingScopeDepth--;
+        if (loadingScopeDepth == 0)
+        {
+            LoadingStatusText = "Ready.";
+            IsLoading = false;
+        }
+    }
+
     private void RaiseCommandCanExecuteChanged()
     {
         RaiseCanExecuteChanged(SaveVaultCommand);
@@ -966,6 +1040,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaiseCanExecuteChanged(EditFieldCommand);
         RaiseCanExecuteChanged(DeleteFieldCommand);
         RaiseCanExecuteChanged(CopyFieldValueCommand);
+        RaiseCanExecuteChanged(ApplyClipboardSettingsCommand);
+        RaiseCanExecuteChanged(ApplyIdleLockSettingsCommand);
         RaiseCanExecuteChanged(UnlockVaultCommand);
     }
 
@@ -989,7 +1065,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private bool CanMutateVault(object? parameter)
     {
-        return !IsVaultLocked && activeConnection?.State == ConnectionState.Open;
+        return !IsLoading && !IsVaultLocked && activeConnection?.State == ConnectionState.Open;
     }
 
     private bool CanSaveVault(object? parameter)
@@ -1016,7 +1092,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private bool CanUnlockVault(object? parameter)
     {
-        return IsVaultLocked &&
+        return !IsLoading &&
+            IsVaultLocked &&
             activeConnection?.State == ConnectionState.Open &&
             !string.IsNullOrWhiteSpace(activeVaultFilePath);
     }
@@ -1131,5 +1208,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         return null;
+    }
+
+    private sealed class LoadingScope : IDisposable
+    {
+        private MainWindowViewModel? owner;
+
+        public LoadingScope(MainWindowViewModel owner)
+        {
+            this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        }
+
+        public void Dispose()
+        {
+            MainWindowViewModel? currentOwner = Interlocked.Exchange(ref owner, null);
+            currentOwner?.EndLoading();
+        }
     }
 }
