@@ -231,8 +231,12 @@
 
                     <TreeView x:Name="VaultTreeView"
                               Grid.Row="2"
+                              AllowDrop="True"
                               ItemsSource="{Binding VaultNodes}"
                               BorderThickness="0"
+                              PreviewMouseLeftButtonDown="VaultTreeView_PreviewMouseLeftButtonDown"
+                              PreviewMouseMove="VaultTreeView_PreviewMouseMove"
+                              Drop="VaultTreeView_Drop"
                               SelectedItemChanged="VaultTreeView_SelectedItemChanged"
                               ScrollViewer.CanContentScroll="True"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"

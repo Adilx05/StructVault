@@ -532,6 +532,52 @@ public sealed class MainWindowViewModel : ViewModelBase
         await ReplaceSelectedFieldsAsync(fields, cancellationToken).ConfigureAwait(true);
     }
 
+    public async Task<bool> ReorderVaultNodeAsync(
+        VaultTreeNodeViewModel? draggedNode,
+        VaultTreeNodeViewModel? targetNode,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (draggedNode is null || targetNode is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(draggedNode.Id, targetNode.Id, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!CanMutateVault(null))
+        {
+            return false;
+        }
+
+        if (!string.Equals(draggedNode.ParentNodeId, targetNode.ParentNodeId, StringComparison.Ordinal))
+        {
+            contextMenuInputService.ShowValidationError(
+                "Reorder unavailable",
+                "Drag and drop can only reorder nodes within the same parent.");
+            return false;
+        }
+
+        using IDisposable loadingScope = BeginLoading("Reordering node...");
+        DbConnection connection = RequireActiveOpenConnection();
+        bool reordered = await sender
+            .Send(new ReorderVaultNodeCommand(connection, draggedNode.Id, targetNode.SortOrder, DateTimeOffset.UtcNow), cancellationToken)
+            .ConfigureAwait(true);
+
+        if (!reordered)
+        {
+            return false;
+        }
+
+        MarkDirty();
+        await RefreshVaultTreeAsync(draggedNode.Id, cancellationToken).ConfigureAwait(true);
+        return true;
+    }
+
     private async Task<bool> UnlockVaultAsync(object? parameter, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

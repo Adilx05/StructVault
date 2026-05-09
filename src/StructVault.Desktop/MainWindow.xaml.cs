@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using MahApps.Metro.Controls;
 using StructVault.Application.Abstractions.Logging;
@@ -20,6 +21,8 @@ public partial class MainWindow : MetroWindow
     private readonly DispatcherTimer idleLockTimer;
     private bool closeConfirmed;
     private bool closeConfirmationInProgress;
+    private Point nodeDragStartPoint;
+    private VaultTreeNodeViewModel? draggedNode;
     private DateTimeOffset lastActivityReportUtc = DateTimeOffset.MinValue;
 
     public MainWindow()
@@ -189,11 +192,69 @@ public partial class MainWindow : MetroWindow
         }
     }
 
+    private void VaultTreeView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        nodeDragStartPoint = e.GetPosition(VaultTreeView);
+        draggedNode = FindTreeViewNode(e.OriginalSource as DependencyObject);
+    }
+
+    private void VaultTreeView_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || draggedNode is null)
+        {
+            return;
+        }
+
+        Point currentPosition = e.GetPosition(VaultTreeView);
+        if (Math.Abs(currentPosition.X - nodeDragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(currentPosition.Y - nodeDragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        DragDrop.DoDragDrop(VaultTreeView, draggedNode, DragDropEffects.Move);
+        draggedNode = null;
+    }
+
+    private async void VaultTreeView_Drop(object sender, DragEventArgs e)
+    {
+        VaultTreeNodeViewModel? sourceNode = e.Data.GetData(typeof(VaultTreeNodeViewModel)) as VaultTreeNodeViewModel;
+        VaultTreeNodeViewModel? targetNode = FindTreeViewNode(e.OriginalSource as DependencyObject);
+        draggedNode = null;
+
+        if (DataContext is not MainWindowViewModel viewModel || sourceNode is null || targetNode is null)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        bool reordered = await viewModel.ReorderVaultNodeAsync(sourceNode, targetNode).ConfigureAwait(true);
+        e.Effects = reordered ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
     private async void VaultTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         if (DataContext is MainWindowViewModel viewModel)
         {
             await viewModel.SelectVaultNodeAsync(e.NewValue as VaultTreeNodeViewModel).ConfigureAwait(true);
         }
+    }
+
+    private static VaultTreeNodeViewModel? FindTreeViewNode(DependencyObject? source)
+    {
+        DependencyObject? current = source;
+        while (current is not null)
+        {
+            if (current is TreeViewItem { DataContext: VaultTreeNodeViewModel node })
+            {
+                return node;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
     }
 }
