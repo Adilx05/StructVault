@@ -62,6 +62,36 @@ public sealed class MainWindowLayoutTests
     }
 
     [Fact]
+    public void MainWindowRendersSelectedNodeFieldsDynamically()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+
+        XElement fieldTemplate = Assert.Single(mainWindow
+            .Descendants(PresentationNamespace + "DataTemplate")
+            .Where(template => (string?)template.Attribute("DataType") == "{x:Type viewModels:VaultFieldViewModel}"));
+        XElement itemsControl = Assert.Single(mainWindow.Descendants(PresentationNamespace + "ItemsControl"));
+        XElement fieldKey = Assert.Single(fieldTemplate
+            .Descendants(PresentationNamespace + "TextBlock")
+            .Where(element => (string?)element.Attribute("Text") == "{Binding Key}"));
+        XElement fieldValue = Assert.Single(fieldTemplate.Descendants(PresentationNamespace + "TextBox"));
+
+        Assert.Equal("{Binding SelectedFields}", (string?)itemsControl.Attribute("ItemsSource"));
+        Assert.Equal("{Binding DisplayValue}", (string?)fieldValue.Attribute("Text"));
+        Assert.Equal("True", (string?)fieldValue.Attribute("IsReadOnly"));
+        Assert.Equal("Wrap", (string?)fieldKey.Attribute("TextWrapping"));
+    }
+
+    [Fact]
+    public void MainWindowNotifiesViewModelWhenTreeSelectionChanges()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+
+        XElement vaultTreeView = Assert.Single(mainWindow.Descendants(PresentationNamespace + "TreeView"));
+
+        Assert.Equal("VaultTreeView_SelectedItemChanged", (string?)vaultTreeView.Attribute("SelectedItemChanged"));
+    }
+
+    [Fact]
     public void MainWindowProvidesResizableWorkspaceSplitter()
     {
         XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));

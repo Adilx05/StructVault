@@ -11,10 +11,36 @@
                  MinHeight="520"
                  MinWidth="860">
     <mah:MetroWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <HierarchicalDataTemplate DataType="{x:Type viewModels:VaultTreeNodeViewModel}"
                                   ItemsSource="{Binding Children}">
             <TextBlock Text="{Binding Name}" />
         </HierarchicalDataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:VaultFieldViewModel}">
+            <Border Margin="0,0,0,10"
+                    Padding="12"
+                    Background="White"
+                    BorderBrush="#FFE1E1E1"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0"
+                               FontWeight="SemiBold"
+                               Text="{Binding Key}"
+                               TextWrapping="Wrap" />
+                    <TextBox Grid.Row="1"
+                             Margin="0,6,0,0"
+                             IsReadOnly="True"
+                             Text="{Binding DisplayValue}"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" />
+                </Grid>
+            </Border>
+        </DataTemplate>
     </mah:MetroWindow.Resources>
 
     <Grid Margin="16">
@@ -69,6 +95,7 @@
                               Grid.Row="1"
                               ItemsSource="{Binding VaultNodes}"
                               BorderThickness="0"
+                              SelectedItemChanged="VaultTreeView_SelectedItemChanged"
                               ScrollViewer.CanContentScroll="True"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               ScrollViewer.VerticalScrollBarVisibility="Auto" />
@@ -119,18 +146,56 @@
                                 BorderBrush="#FFE6E6E6"
                                 BorderThickness="1"
                                 CornerRadius="4">
-                            <StackPanel HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <TextBlock HorizontalAlignment="Center"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Text="No node selected" />
-                                <TextBlock Margin="0,8,0,0"
-                                           HorizontalAlignment="Center"
-                                           Foreground="#FF666666"
-                                           Text="Choose an item from the vault structure to inspect its details."
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
+                            <Grid>
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasSelectedNode}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock HorizontalAlignment="Center"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Text="No node selected" />
+                                    <TextBlock Margin="0,8,0,0"
+                                               HorizontalAlignment="Center"
+                                               Foreground="#FF666666"
+                                               Text="Choose an item from the vault structure to inspect its details."
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding HasSelectedNode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock FontSize="20"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding SelectedNodeName}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,4,0,16"
+                                               Foreground="#FF666666"
+                                               Text="Fields" />
+                                    <TextBlock Margin="0,0,0,12"
+                                               Foreground="#FF666666"
+                                               Text="This node does not contain any fields."
+                                               TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasSelectedFields}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <ItemsControl ItemsSource="{Binding SelectedFields}" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
                     </ScrollViewer>
                 </Grid>
