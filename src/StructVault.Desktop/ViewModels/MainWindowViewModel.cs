@@ -18,12 +18,15 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly IContextMenuInputService contextMenuInputService;
     private readonly ObservableCollection<VaultTreeNodeViewModel> vaultNodes = new();
     private readonly ObservableCollection<VaultFieldViewModel> selectedFields = new();
+    private readonly ObservableCollection<VaultSearchResultViewModel> searchResults = new();
     private readonly ReadOnlyObservableCollection<VaultTreeNodeViewModel> readOnlyVaultNodes;
     private readonly ReadOnlyObservableCollection<VaultFieldViewModel> readOnlySelectedFields;
+    private readonly ReadOnlyObservableCollection<VaultSearchResultViewModel> readOnlySearchResults;
     private DbConnection? activeConnection;
     private string? activeVaultFilePath;
     private string? activeVaultPassword;
     private VaultTreeNodeViewModel? selectedNode;
+    private string searchText = string.Empty;
     private bool isDirty;
 
     public MainWindowViewModel(ISender sender)
@@ -37,8 +40,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         this.contextMenuInputService = contextMenuInputService ?? throw new ArgumentNullException(nameof(contextMenuInputService));
         readOnlyVaultNodes = new ReadOnlyObservableCollection<VaultTreeNodeViewModel>(vaultNodes);
         readOnlySelectedFields = new ReadOnlyObservableCollection<VaultFieldViewModel>(selectedFields);
+        readOnlySearchResults = new ReadOnlyObservableCollection<VaultSearchResultViewModel>(searchResults);
 
         SaveVaultCommand = new AsyncCommand((parameter, cancellationToken) => SaveVaultAsync(parameter, cancellationToken), CanSaveVault);
+        SearchVaultCommand = new AsyncCommand((parameter, cancellationToken) => SearchVaultAsync(cancellationToken), CanSearchVault);
         AddRootNodeCommand = new AsyncCommand(AddRootNodeAsync, CanMutateVault);
         AddChildNodeCommand = new AsyncCommand(AddChildNodeAsync, CanMutateNode);
         RenameNodeCommand = new AsyncCommand(RenameNodeAsync, CanMutateNode);
@@ -52,7 +57,11 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public ReadOnlyObservableCollection<VaultFieldViewModel> SelectedFields => readOnlySelectedFields;
 
+    public ReadOnlyObservableCollection<VaultSearchResultViewModel> SearchResults => readOnlySearchResults;
+
     public ICommand SaveVaultCommand { get; }
+
+    public ICommand SearchVaultCommand { get; }
 
     public ICommand AddRootNodeCommand { get; }
 
@@ -86,6 +95,33 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool HasSelectedNode => SelectedNode is not null;
 
     public bool HasSelectedFields => selectedFields.Count > 0;
+
+    public bool HasSearchResults => searchResults.Count > 0;
+
+    public bool HasSearchText => SearchText.Length > 0;
+
+    public string SearchStatusText => HasSearchText
+        ? $"{searchResults.Count} search result{(searchResults.Count == 1 ? string.Empty : "s")}"
+        : "Enter text to search nodes and fields.";
+
+    public string SearchText
+    {
+        get => searchText;
+        set
+        {
+            string normalizedValue = value?.Trim() ?? string.Empty;
+            if (SetProperty(ref searchText, normalizedValue))
+            {
+                if (searchText.Length == 0)
+                {
+                    ClearSearchResults();
+                }
+
+                OnPropertyChanged(nameof(HasSearchText));
+                OnPropertyChanged(nameof(SearchStatusText));
+            }
+        }
+    }
 
     public bool IsDirty
     {
@@ -121,6 +157,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         activeConnection = connection;
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
+        SearchText = string.Empty;
+        ClearSearchResults();
         SetClean();
         OnPropertyChanged(nameof(CanSave));
     }
@@ -151,6 +189,44 @@ public sealed class MainWindowViewModel : ViewModelBase
     public async Task SaveVaultAsync(CancellationToken cancellationToken = default)
     {
         await SaveVaultAsync(null, cancellationToken).ConfigureAwait(true);
+    }
+
+    public async Task SearchVaultAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        DbConnection connection = RequireActiveOpenConnection();
+        string normalizedSearchText = SearchText.Trim();
+        if (normalizedSearchText.Length == 0)
+        {
+            ClearSearchResults();
+            return;
+        }
+
+        IReadOnlyList<VaultSearchResultRecord> results = await sender
+            .Send(new SearchVaultQuery(connection, normalizedSearchText), cancellationToken)
+            .ConfigureAwait(true);
+
+        ReplaceSearchResults(results);
+    }
+
+    public async Task SelectSearchResultAsync(VaultSearchResultViewModel? result, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (result is null)
+        {
+            return;
+        }
+
+        VaultTreeNodeViewModel? node = FindNodeById(vaultNodes, result.NodeId);
+        if (node is null)
+        {
+            await RefreshVaultTreeAsync(result.NodeId, cancellationToken).ConfigureAwait(true);
+            return;
+        }
+
+        await SelectVaultNodeAsync(node, cancellationToken).ConfigureAwait(true);
     }
 
     public async Task SelectVaultNodeAsync(VaultTreeNodeViewModel? node, CancellationToken cancellationToken = default)
@@ -374,6 +450,25 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void ReplaceSearchResults(IReadOnlyList<VaultSearchResultRecord> results)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+
+        searchResults.Clear();
+        foreach (VaultSearchResultRecord result in results)
+        {
+            if (result is null)
+            {
+                throw new ArgumentException("Vault search results cannot contain null entries.", nameof(results));
+            }
+
+            searchResults.Add(new VaultSearchResultViewModel(result));
+        }
+
+        OnPropertyChanged(nameof(HasSearchResults));
+        OnPropertyChanged(nameof(SearchStatusText));
+    }
+
     private void ReplaceSelectedFields(IReadOnlyList<VaultFieldRecord> fields)
     {
         ArgumentNullException.ThrowIfNull(fields);
@@ -398,6 +493,13 @@ public sealed class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasSelectedFields));
     }
 
+    private void ClearSearchResults()
+    {
+        searchResults.Clear();
+        OnPropertyChanged(nameof(HasSearchResults));
+        OnPropertyChanged(nameof(SearchStatusText));
+    }
+
     private void MarkDirty()
     {
         IsDirty = true;
@@ -418,6 +520,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         return CanMutateVault(parameter) &&
             !string.IsNullOrWhiteSpace(activeVaultFilePath) &&
             !string.IsNullOrWhiteSpace(activeVaultPassword);
+    }
+
+    private bool CanSearchVault(object? parameter)
+    {
+        return CanMutateVault(parameter) && !string.IsNullOrWhiteSpace(SearchText);
     }
 
     private bool CanMutateNode(object? parameter)

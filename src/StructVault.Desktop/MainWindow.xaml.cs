@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using MahApps.Metro.Controls;
 using StructVault.Application.Persistence;
 using StructVault.Desktop.Composition;
@@ -72,6 +73,14 @@ public partial class MainWindow : MetroWindow
         finally
         {
             closeConfirmationInProgress = false;
+        }
+    }
+
+    private async void SearchResultsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && sender is ListBox { SelectedItem: VaultSearchResultViewModel result })
+        {
+            await viewModel.SelectSearchResultAsync(result).ConfigureAwait(true);
         }
     }
 

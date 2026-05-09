@@ -46,6 +46,9 @@ internal sealed class DesktopVaultSender : ISender
             ListVaultNodesQuery query => await new ListVaultNodesQueryHandler(nodeStore)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
+            SearchVaultQuery query => await new SearchVaultQueryHandler(nodeStore, fieldStore)
+                .Handle(query, cancellationToken)
+                .ConfigureAwait(false),
             GetVaultNodeByIdQuery query => await new GetVaultNodeByIdQueryHandler(nodeStore)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
@@ -144,6 +147,8 @@ internal sealed class DesktopVaultSender : ISender
             case ListVaultNodeHierarchyQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case ListVaultNodesQuery query:
+                return await Send(query, cancellationToken).ConfigureAwait(false);
+            case SearchVaultQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case GetVaultNodeByIdQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);

@@ -109,6 +109,40 @@ public sealed class SqliteVaultNodeWriter : IVaultNodeWriter, IVaultNodeReader
         return nodes;
     }
 
+
+    public async Task<IReadOnlyList<VaultSearchResultRecord>> SearchAsync(DbConnection connection, SearchVaultQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SqliteConnection sqliteConnection = RequireOpenSqliteConnection(connection);
+
+        await using SqliteCommand command = sqliteConnection.CreateCommand();
+        command.CommandText = """
+            SELECT Id,
+                   Name
+            FROM VaultNode
+            WHERE Name COLLATE NOCASE LIKE $pattern ESCAPE '\'
+            ORDER BY ParentNodeId IS NOT NULL, ParentNodeId, SortOrder, Name, Id;
+            """;
+        command.Parameters.AddWithValue("$pattern", CreateLikePattern(query.SearchText));
+
+        List<VaultSearchResultRecord> results = new();
+        await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            results.Add(new VaultSearchResultRecord(
+                VaultSearchResultKind.Node,
+                reader.GetString(0),
+                reader.GetString(1),
+                null,
+                null,
+                "Node name"));
+        }
+
+        return results;
+    }
+
     public async Task<bool> UpdateAsync(DbConnection connection, UpdateVaultNodeCommand node, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -153,6 +187,20 @@ public sealed class SqliteVaultNodeWriter : IVaultNodeWriter, IVaultNodeReader
         command.Parameters.AddWithValue("$id", node.Id);
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+
+    private static string CreateLikePattern(string searchText)
+    {
+        return "%" + EscapeLikePattern(searchText.Trim()) + "%";
+    }
+
+    private static string EscapeLikePattern(string value)
+    {
+        return value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
     }
 
     private static SqliteConnection RequireOpenSqliteConnection(DbConnection connection)

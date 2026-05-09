@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Text;
 using Microsoft.Data.Sqlite;
 using StructVault.Application.Abstractions.Persistence;
 using StructVault.Application.Persistence;
@@ -9,6 +10,8 @@ namespace StructVault.Persistence.Database;
 
 public sealed class SqliteVaultFieldWriter : IVaultFieldWriter, IVaultFieldReader
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+
     public async Task CreateAsync(DbConnection connection, CreateVaultFieldCommand field, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(field);
@@ -114,6 +117,54 @@ public sealed class SqliteVaultFieldWriter : IVaultFieldWriter, IVaultFieldReade
         }
 
         return fields;
+    }
+
+
+    public async Task<IReadOnlyList<VaultSearchResultRecord>> SearchAsync(DbConnection connection, SearchVaultQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SqliteConnection sqliteConnection = RequireOpenSqliteConnection(connection);
+
+        await using SqliteCommand command = sqliteConnection.CreateCommand();
+        command.CommandText = """
+            SELECT VaultField.Id,
+                   VaultField.NodeId,
+                   VaultNode.Name,
+                   VaultField.Key,
+                   VaultField.Value
+            FROM VaultField
+            INNER JOIN VaultNode ON VaultNode.Id = VaultField.NodeId
+            ORDER BY VaultNode.ParentNodeId IS NOT NULL,
+                     VaultNode.ParentNodeId,
+                     VaultNode.SortOrder,
+                     VaultNode.Name,
+                     VaultField.SortOrder,
+                     VaultField.Id;
+            """;
+
+        List<VaultSearchResultRecord> results = new();
+        await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            string fieldKey = reader.GetString(3);
+            string? matchedProperty = GetMatchedFieldProperty(fieldKey, (byte[])reader[4], query.SearchText);
+            if (matchedProperty is null)
+            {
+                continue;
+            }
+
+            results.Add(new VaultSearchResultRecord(
+                VaultSearchResultKind.Field,
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(0),
+                fieldKey,
+                matchedProperty));
+        }
+
+        return results;
     }
 
     public async Task<bool> UpdateAsync(DbConnection connection, UpdateVaultFieldCommand field, CancellationToken cancellationToken)
@@ -291,6 +342,25 @@ public sealed class SqliteVaultFieldWriter : IVaultFieldWriter, IVaultFieldReade
         if (affectedRows > 1)
         {
             throw new InvalidOperationException("Vault field reordering updated multiple rows for a single field id.");
+        }
+    }
+
+
+    private static string? GetMatchedFieldProperty(string key, byte[] value, string searchText)
+    {
+        if (key.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        {
+            return "Field key";
+        }
+
+        try
+        {
+            string textValue = StrictUtf8.GetString(value);
+            return textValue.Contains(searchText, StringComparison.OrdinalIgnoreCase) ? "Field value" : null;
+        }
+        catch (DecoderFallbackException)
+        {
+            return null;
         }
     }
 

@@ -112,13 +112,13 @@
 ## 🔍 Phase 8 – Search Feature
 
 ### Implementation
-- [ ] Implement global search (nodes + fields)
+- [x] Implement global search (nodes + fields)
 - [ ] Add filtering support
 
 ### Tests
-- [ ] Test: search by node name
-- [ ] Test: search by field value
-- [ ] Test: partial match works
+- [x] Test: search by node name
+- [x] Test: search by field value
+- [x] Test: partial match works
 
 ---
 
