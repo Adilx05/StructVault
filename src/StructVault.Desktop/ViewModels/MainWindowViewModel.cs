@@ -95,6 +95,25 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public bool CanSave => CanSaveVault(null);
 
+    public async Task<bool> ConfirmExitAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!IsDirty)
+        {
+            return true;
+        }
+
+        UnsavedChangesExitChoice choice = contextMenuInputService.PromptUnsavedChangesOnExit(CanSave);
+        return choice switch
+        {
+            UnsavedChangesExitChoice.SaveAndExit => await SaveAndConfirmExitAsync(cancellationToken).ConfigureAwait(true),
+            UnsavedChangesExitChoice.ExitWithoutSaving => true,
+            UnsavedChangesExitChoice.CancelExit => false,
+            _ => throw new InvalidOperationException($"Unsupported unsaved changes exit choice '{choice}'.")
+        };
+    }
+
     public async Task LoadVaultTreeAsync(DbConnection connection, CancellationToken cancellationToken = default)
     {
         RequireOpenConnection(connection);
@@ -154,6 +173,25 @@ public sealed class MainWindowViewModel : ViewModelBase
             .ConfigureAwait(true);
 
         ReplaceSelectedFields(fields);
+    }
+
+    private async Task<bool> SaveAndConfirmExitAsync(CancellationToken cancellationToken)
+    {
+        if (!CanSave)
+        {
+            return false;
+        }
+
+        try
+        {
+            await SaveVaultAsync(null, cancellationToken).ConfigureAwait(true);
+            return !IsDirty;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            contextMenuInputService.ShowValidationError("Save failed", "The vault could not be saved, so StructVault will remain open. " + ex.Message);
+            return false;
+        }
     }
 
     private async Task SaveVaultAsync(object? parameter, CancellationToken cancellationToken)

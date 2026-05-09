@@ -33,6 +33,37 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         return result == MessageBoxResult.Yes;
     }
 
+    public UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave)
+    {
+        if (canSave)
+        {
+            MessageBoxResult result = MessageBox.Show(
+                "The vault has unsaved changes. Save before exiting?",
+                "Unsaved changes",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Cancel);
+
+            return result switch
+            {
+                MessageBoxResult.Yes => UnsavedChangesExitChoice.SaveAndExit,
+                MessageBoxResult.No => UnsavedChangesExitChoice.ExitWithoutSaving,
+                _ => UnsavedChangesExitChoice.CancelExit
+            };
+        }
+
+        MessageBoxResult discardResult = MessageBox.Show(
+            "The vault has unsaved changes, but no save target is configured. Exit without saving?",
+            "Unsaved changes",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        return discardResult == MessageBoxResult.Yes
+            ? UnsavedChangesExitChoice.ExitWithoutSaving
+            : UnsavedChangesExitChoice.CancelExit;
+    }
+
     public void ShowValidationError(string title, string message)
     {
         MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);

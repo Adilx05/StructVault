@@ -121,6 +121,11 @@ public sealed class VaultAddNodeUpdatesTreeViewModelTests
             throw new NotSupportedException("Add-node tree update tests do not delete nodes or fields.");
         }
 
+        public UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave)
+        {
+            throw new NotSupportedException("This test does not confirm window exit.");
+        }
+
         public void ShowValidationError(string title, string message)
         {
             throw new InvalidOperationException($"Unexpected validation error '{title}': {message}");
