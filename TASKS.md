@@ -153,11 +153,11 @@
 
 ### Implementation
 - [x] Clipboard settings (enable/disable + duration)
-- [ ] Idle lock settings (enable/disable + duration)
+- [x] Idle lock settings (enable/disable + duration)
 
 ### Tests
-- [ ] Test: settings persist correctly
-- [ ] Test: settings applied at runtime
+- [x] Test: settings persist correctly
+- [x] Test: settings applied at runtime
 
 ---
 
