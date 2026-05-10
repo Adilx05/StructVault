@@ -45,8 +45,8 @@ public sealed class ContextMenuInputService : IContextMenuInputService
             title,
             message,
             [
-                new DialogChoice("Yes", "yes", isDefault: false),
-                new DialogChoice("No", "no", isDefault: true, isCancel: true)
+                new DialogChoice("Yes", "yes", IsDefault: false),
+                new DialogChoice("No", "no", IsCancel: true, IsDefault: false)
             ],
             "no");
 
@@ -61,9 +61,9 @@ public sealed class ContextMenuInputService : IContextMenuInputService
                 "Unsaved changes",
                 "The vault has unsaved changes. Save before exiting?",
                 [
-                    new DialogChoice("Save", "save", isDefault: true),
+                    new DialogChoice("Save", "save", IsDefault: true),
                     new DialogChoice("Don't save", "discard"),
-                    new DialogChoice("Cancel", "cancel", isCancel: true)
+                    new DialogChoice("Cancel", "cancel", IsCancel: true)
                 ],
                 "cancel");
 
@@ -80,7 +80,7 @@ public sealed class ContextMenuInputService : IContextMenuInputService
             "The vault has unsaved changes, but no save target is configured. Exit without saving?",
             [
                 new DialogChoice("Exit without saving", "discard"),
-                new DialogChoice("Cancel", "cancel", isDefault: true, isCancel: true)
+                new DialogChoice("Cancel", "cancel", IsDefault: true, IsCancel: true)
             ],
             "cancel");
 
@@ -94,7 +94,7 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         _ = ShowMahAppsChoiceDialog(
             title,
             message,
-            [new DialogChoice("OK", "ok", isDefault: true, isCancel: true)],
+            [new DialogChoice("OK", "ok", IsDefault: true, IsCancel: true)],
             "ok");
     }
 
