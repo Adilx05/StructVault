@@ -111,6 +111,38 @@ public sealed class MainWindowLayoutTests
             (string?)addChildNode.Attribute("CommandParameter"));
     }
 
+    [Fact]
+    public void MainWindowPlacesSettingsInDedicatedMetroTab()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+        XNamespace mahAppsNamespace = "http://metro.mahapps.com/winfx/xaml/controls";
+
+        XElement tabControl = Assert.Single(mainWindow.Descendants(mahAppsNamespace + "MetroTabControl"));
+        List<XElement> tabs = tabControl.Elements(PresentationNamespace + "TabItem").ToList();
+
+        Assert.Collection(tabs,
+            tab => Assert.Equal("Vault", (string?)tab.Attribute("Header")),
+            tab => Assert.Equal("Settings", (string?)tab.Attribute("Header")));
+        Assert.Contains(tabs[1].Descendants(PresentationNamespace + "TextBlock"),
+            element => (string?)element.Attribute("Text") == "Clipboard settings");
+        Assert.Contains(tabs[1].Descendants(PresentationNamespace + "TextBlock"),
+            element => (string?)element.Attribute("Text") == "Idle lock settings");
+        Assert.Contains(tabs[1].Descendants(PresentationNamespace + "TextBlock"),
+            element => (string?)element.Attribute("Text") == "Theme settings");
+    }
+
+    [Fact]
+    public void MainWindowUsesMahAppsBrushesInsteadOfHardCodedThemeColors()
+    {
+        string mainWindow = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+
+        Assert.DoesNotContain("Background=\"White\"", mainWindow, StringComparison.Ordinal);
+        Assert.DoesNotContain("#FF", mainWindow, StringComparison.Ordinal);
+        Assert.DoesNotContain("#DF", mainWindow, StringComparison.Ordinal);
+        Assert.DoesNotContain("#EF", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource MahApps.Brushes", mainWindow, StringComparison.Ordinal);
+    }
+
 
     [Fact]
     public void MainWindowConfiguresFieldDragDropEvents()

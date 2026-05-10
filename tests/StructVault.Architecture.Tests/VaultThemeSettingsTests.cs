@@ -35,16 +35,16 @@ public sealed class VaultThemeSettingsTests
         SaveThemeSettingsCommandHandler saveHandler = new(settingStore);
         GetThemeSettingsQueryHandler getHandler = new(settingStore);
 
-        await saveHandler.Handle(new SaveThemeSettingsCommand(connection, ThemeSettingsRecord.DarkBlueThemeName), CancellationToken.None);
+        await saveHandler.Handle(new SaveThemeSettingsCommand(connection, ThemeSettingsRecord.LightPurpleThemeName), CancellationToken.None);
         ThemeSettingsRecord settings = await getHandler.Handle(new GetThemeSettingsQuery(connection), CancellationToken.None);
 
-        Assert.Equal(ThemeSettingsRecord.DarkBlueThemeName, settings.ThemeName);
+        Assert.Equal(ThemeSettingsRecord.LightPurpleThemeName, settings.ThemeName);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("Light.Green")]
+    [InlineData("Dark.Blue")]
     public async Task SaveThemeSettingsRejectsUnsupportedThemeNames(string themeName)
     {
         await using DbConnection connection = await CreateVaultConnectionAsync();
@@ -72,15 +72,15 @@ public sealed class VaultThemeSettingsTests
         RecordingThemeService themeService = new();
         RecordingSender sender = new(CreateHierarchy())
         {
-            ThemeSettings = new ThemeSettingsRecord(ThemeSettingsRecord.DarkBlueThemeName)
+            ThemeSettings = new ThemeSettingsRecord(ThemeSettingsRecord.LightPurpleThemeName)
         };
         MainWindowViewModel viewModel = new(sender, new ContextMenuInputService(), new UiResponsivenessOptions(), themeService);
         await using DbConnection connection = await CreateVaultConnectionAsync();
 
         await viewModel.LoadVaultTreeAsync(connection);
 
-        Assert.Equal(ThemeSettingsRecord.DarkBlueThemeName, viewModel.SelectedThemeName);
-        Assert.Equal(ThemeSettingsRecord.DarkBlueThemeName, Assert.Single(themeService.AppliedThemeNames));
+        Assert.Equal(ThemeSettingsRecord.LightPurpleThemeName, viewModel.SelectedThemeName);
+        Assert.Equal(ThemeSettingsRecord.LightPurpleThemeName, Assert.Single(themeService.AppliedThemeNames));
         Assert.False(viewModel.IsDirty);
     }
 
@@ -94,12 +94,12 @@ public sealed class VaultThemeSettingsTests
         await viewModel.LoadVaultTreeAsync(connection);
         themeService.AppliedThemeNames.Clear();
 
-        viewModel.SelectedThemeName = ThemeSettingsRecord.DarkBlueThemeName;
+        viewModel.SelectedThemeName = ThemeSettingsRecord.LightPurpleThemeName;
         await ((AsyncCommand)viewModel.ApplyThemeSettingsCommand).ExecuteAsync(null);
 
         SaveThemeSettingsCommand command = Assert.IsType<SaveThemeSettingsCommand>(sender.LastRequest);
-        Assert.Equal(ThemeSettingsRecord.DarkBlueThemeName, command.ThemeName);
-        Assert.Equal(ThemeSettingsRecord.DarkBlueThemeName, Assert.Single(themeService.AppliedThemeNames));
+        Assert.Equal(ThemeSettingsRecord.LightPurpleThemeName, command.ThemeName);
+        Assert.Equal(ThemeSettingsRecord.LightPurpleThemeName, Assert.Single(themeService.AppliedThemeNames));
         Assert.True(viewModel.IsDirty);
     }
 

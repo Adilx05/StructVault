@@ -41,44 +41,127 @@ public sealed class ContextMenuInputService : IContextMenuInputService
 
     public bool ConfirmDelete(string title, string message)
     {
-        MessageBoxResult result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-        return result == MessageBoxResult.Yes;
+        string choice = ShowMahAppsChoiceDialog(
+            title,
+            message,
+            [
+                new DialogChoice("Yes", "yes", isDefault: false),
+                new DialogChoice("No", "no", isDefault: true, isCancel: true)
+            ],
+            "no");
+
+        return string.Equals(choice, "yes", StringComparison.Ordinal);
     }
 
     public UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave)
     {
         if (canSave)
         {
-            MessageBoxResult result = MessageBox.Show(
-                "The vault has unsaved changes. Save before exiting?",
+            string choice = ShowMahAppsChoiceDialog(
                 "Unsaved changes",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning,
-                MessageBoxResult.Cancel);
+                "The vault has unsaved changes. Save before exiting?",
+                [
+                    new DialogChoice("Save", "save", isDefault: true),
+                    new DialogChoice("Don't save", "discard"),
+                    new DialogChoice("Cancel", "cancel", isCancel: true)
+                ],
+                "cancel");
 
-            return result switch
+            return choice switch
             {
-                MessageBoxResult.Yes => UnsavedChangesExitChoice.SaveAndExit,
-                MessageBoxResult.No => UnsavedChangesExitChoice.ExitWithoutSaving,
+                "save" => UnsavedChangesExitChoice.SaveAndExit,
+                "discard" => UnsavedChangesExitChoice.ExitWithoutSaving,
                 _ => UnsavedChangesExitChoice.CancelExit
             };
         }
 
-        MessageBoxResult discardResult = MessageBox.Show(
-            "The vault has unsaved changes, but no save target is configured. Exit without saving?",
+        string discardChoice = ShowMahAppsChoiceDialog(
             "Unsaved changes",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
+            "The vault has unsaved changes, but no save target is configured. Exit without saving?",
+            [
+                new DialogChoice("Exit without saving", "discard"),
+                new DialogChoice("Cancel", "cancel", isDefault: true, isCancel: true)
+            ],
+            "cancel");
 
-        return discardResult == MessageBoxResult.Yes
+        return string.Equals(discardChoice, "discard", StringComparison.Ordinal)
             ? UnsavedChangesExitChoice.ExitWithoutSaving
             : UnsavedChangesExitChoice.CancelExit;
     }
 
     public void ShowValidationError(string title, string message)
     {
-        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        _ = ShowMahAppsChoiceDialog(
+            title,
+            message,
+            [new DialogChoice("OK", "ok", isDefault: true, isCancel: true)],
+            "ok");
+    }
+
+
+    private static string ShowMahAppsChoiceDialog(string title, string message, IReadOnlyList<DialogChoice> choices, string defaultResult)
+    {
+        MetroWindow dialog = new()
+        {
+            Title = title,
+            TitleCharacterCasing = CharacterCasing.Normal,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ResizeMode = ResizeMode.NoResize,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            MinWidth = 420
+        };
+
+        string selectedResult = defaultResult;
+        StackPanel layout = new() { Margin = new Thickness(18) };
+        layout.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 520
+        });
+
+        StackPanel buttons = new()
+        {
+            Margin = new Thickness(0, 18, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Orientation = Orientation.Horizontal
+        };
+
+        foreach (DialogChoice choice in choices)
+        {
+            Button button = new()
+            {
+                Margin = buttons.Children.Count == 0 ? new Thickness(0) : new Thickness(8, 0, 0, 0),
+                MinWidth = 84,
+                Content = choice.Caption,
+                IsDefault = choice.IsDefault,
+                IsCancel = choice.IsCancel
+            };
+            button.Click += (_, _) =>
+            {
+                selectedResult = choice.Result;
+                dialog.DialogResult = true;
+            };
+            buttons.Children.Add(button);
+        }
+
+        layout.Children.Add(buttons);
+        dialog.Content = layout;
+        Window? owner = GetActiveOwner(dialog);
+        if (owner is not null)
+        {
+            dialog.Owner = owner;
+        }
+
+        _ = dialog.ShowDialog();
+        return selectedResult;
+    }
+
+    private static Window? GetActiveOwner(Window dialog)
+    {
+        return global::System.Windows.Application.Current?.Windows
+            .OfType<Window>()
+            .FirstOrDefault(window => window.IsActive && !ReferenceEquals(window, dialog));
     }
 
     private static TextBox CreateTextBox(string? value)
@@ -125,8 +208,8 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         layout.Children.Add(buttons);
 
         dialog.Content = layout;
-        Window? owner = global::System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
-        if (owner is not null && !ReferenceEquals(owner, dialog))
+        Window? owner = GetActiveOwner(dialog);
+        if (owner is not null)
         {
             dialog.Owner = owner;
         }
@@ -134,3 +217,5 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         return dialog.ShowDialog() == true;
     }
 }
+
+internal sealed record DialogChoice(string Caption, string Result, bool IsDefault = false, bool IsCancel = false);
