@@ -18,7 +18,11 @@ $patch = [int]$versionPatchNode.InnerText
 $version = "$major.$minor.$patch"
 
 Write-Host "Building StructVault MSI version $version..."
-dotnet build $installerProject -c $Configuration -p:VersionPatch=$patch
+& dotnet build $installerProject -c $Configuration -p:VersionPatch=$patch
+$buildExitCode = $LASTEXITCODE
+if ($buildExitCode -ne 0) {
+    throw "StructVault MSI build failed with exit code $buildExitCode. Version remains $version."
+}
 
 if (-not $NoIncrement) {
     $nextPatch = $patch + 1

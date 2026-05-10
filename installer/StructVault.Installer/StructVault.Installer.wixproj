@@ -10,7 +10,7 @@
 
   <Target Name="PublishDesktopApp" BeforeTargets="BeforeBuild">
     <MSBuild Projects="..\..\src\StructVault.Desktop\StructVault.Desktop.csproj"
-             Targets="Publish"
+             Targets="Restore;Publish"
              Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=false;PublishDir=$(PublishDir);Version=$(Version);VersionPatch=$(VersionPatch)" />
   </Target>
 </Project>

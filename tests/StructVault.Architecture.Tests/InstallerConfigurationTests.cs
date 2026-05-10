@@ -29,7 +29,12 @@ public sealed class InstallerConfigurationTests
         Assert.Equal("1", major);
         Assert.Equal("0", minor);
         Assert.Equal("0", patch);
+        string desktopProject = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/StructVault.Desktop.csproj"));
+
         Assert.Contains("<ProductVersion>$(Version)</ProductVersion>", installerProject, StringComparison.Ordinal);
+        Assert.Contains("<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>", desktopProject, StringComparison.Ordinal);
+        Assert.Contains("Targets=\"Restore;Publish\"", installerProject, StringComparison.Ordinal);
+        Assert.Contains("if ($buildExitCode -ne 0)", buildScript, StringComparison.Ordinal);
         Assert.Contains("$versionPatchNode.InnerText = [string]$nextPatch", buildScript, StringComparison.Ordinal);
     }
 
