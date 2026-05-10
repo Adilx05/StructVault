@@ -187,4 +187,4 @@
 
 - [x] Drag & drop node ordering
 - [x] Field reordering (drag & drop)
-- [ ] Theme switching
+- [x] Theme switching
