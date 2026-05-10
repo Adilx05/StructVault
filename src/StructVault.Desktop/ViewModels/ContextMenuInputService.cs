@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using MahApps.Metro.Controls;
+using Microsoft.Win32;
 
 namespace StructVault.Desktop.ViewModels;
 
@@ -17,8 +18,33 @@ public sealed class ContextMenuInputService : IContextMenuInputService
     {
         TextBox keyTextBox = CreateTextBox(initialValue?.Key);
         TextBox valueTextBox = CreateTextBox(initialValue?.Value);
+        ComboBox fieldTypeComboBox = new()
+        {
+            Margin = new Thickness(0, 6, 0, 0),
+            MinWidth = 320,
+            ItemsSource = VaultFieldTypeCatalog.EnterpriseFieldTypes,
+            DisplayMemberPath = nameof(VaultFieldTypeOption.DisplayName),
+            SelectedValuePath = nameof(VaultFieldTypeOption.Key)
+        };
+        fieldTypeComboBox.SelectionChanged += (_, _) =>
+        {
+            if (fieldTypeComboBox.SelectedValue is string key && !string.IsNullOrWhiteSpace(key))
+            {
+                keyTextBox.Text = key;
+            }
+        };
+
+        VaultFieldTypeOption? selectedOption = VaultFieldTypeCatalog.EnterpriseFieldTypes
+            .FirstOrDefault(option => string.Equals(option.Key, initialValue?.Key, StringComparison.OrdinalIgnoreCase));
+        if (selectedOption is not null)
+        {
+            fieldTypeComboBox.SelectedItem = selectedOption;
+        }
+
         StackPanel content = new() { Margin = new Thickness(0, 4, 0, 0) };
-        content.Children.Add(new TextBlock { Text = keyMessage, TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(new TextBlock { Text = "Choose a common enterprise field type or enter a custom key.", TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(fieldTypeComboBox);
+        content.Children.Add(new TextBlock { Margin = new Thickness(0, 12, 0, 0), Text = keyMessage, TextWrapping = TextWrapping.Wrap });
         content.Children.Add(keyTextBox);
         content.Children.Add(new TextBlock { Margin = new Thickness(0, 12, 0, 0), Text = valueMessage, TextWrapping = TextWrapping.Wrap });
         content.Children.Add(valueTextBox);
@@ -37,6 +63,26 @@ public sealed class ContextMenuInputService : IContextMenuInputService
 
         bool accepted = ShowInputDialog(title, message, passwordBox);
         return accepted ? passwordBox.Password : null;
+    }
+
+    public VaultSaveTargetInput? RequestSaveTarget(string title, string message)
+    {
+        SaveFileDialog fileDialog = new()
+        {
+            Title = title,
+            Filter = "StructVault QPS vault (*.qps)|*.qps|All files (*.*)|*.*",
+            DefaultExt = ".qps",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+
+        if (fileDialog.ShowDialog() != true)
+        {
+            return null;
+        }
+
+        string? password = RequestPassword("Vault password", message);
+        return password is null ? null : new VaultSaveTargetInput(fileDialog.FileName, password);
     }
 
     public bool ConfirmDelete(string title, string message)

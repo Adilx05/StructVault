@@ -76,9 +76,12 @@ public sealed class MainWindowLayoutTests
         XElement fieldValue = Assert.Single(fieldTemplate.Descendants(PresentationNamespace + "TextBox"));
 
         Assert.Equal("{Binding SelectedFields}", (string?)itemsControl.Attribute("ItemsSource"));
-        Assert.Equal("{Binding DisplayValue, Mode=OneWay}", (string?)fieldValue.Attribute("Text"));
+        Assert.Equal("{Binding DisplayText, Mode=OneWay}", (string?)fieldValue.Attribute("Text"));
         Assert.Equal("True", (string?)fieldValue.Attribute("IsReadOnly"));
         Assert.Equal("Wrap", (string?)fieldKey.Attribute("TextWrapping"));
+        Assert.Contains(fieldTemplate.Descendants(PresentationNamespace + "Button"),
+            element => (string?)element.Attribute("Content") == "Copy" &&
+                (string?)element.Attribute("Command") == "{Binding Tag.CopyFieldValueCommand, RelativeSource={RelativeSource AncestorType=Border}}");
     }
 
     [Fact]

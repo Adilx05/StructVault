@@ -8,9 +8,13 @@ public interface IContextMenuInputService
 
     string? RequestPassword(string title, string message);
 
+    VaultSaveTargetInput? RequestSaveTarget(string title, string message) => null;
+
     bool ConfirmDelete(string title, string message);
 
     UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave);
 
     void ShowValidationError(string title, string message);
 }
+
+public sealed record VaultSaveTargetInput(string FilePath, string Password);
