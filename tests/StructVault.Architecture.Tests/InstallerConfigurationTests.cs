@@ -25,7 +25,9 @@ public sealed class InstallerConfigurationTests
         Assert.Contains("<PackageReference Include=\"WixToolset.UI.wixext\" Version=\"5.0.2\" />", installerProject, StringComparison.Ordinal);
         Assert.Contains("<ui:WixUI Id=\"WixUI_InstallDir\" InstallDirectory=\"INSTALLFOLDER\" />", package, StringComparison.Ordinal);
         Assert.Contains("<WixVariable Id=\"WixUILicenseRtf\" Value=\"License.rtf\" />", package, StringComparison.Ordinal);
-        Assert.Contains("Directory=\"DesktopFolder\"", package, StringComparison.Ordinal);
+        Assert.Contains("<StandardDirectory Id=\"CommonProgramsFolder\">", package, StringComparison.Ordinal);
+        Assert.Contains("<StandardDirectory Id=\"CommonDesktopFolder\" />", package, StringComparison.Ordinal);
+        Assert.Contains("Directory=\"CommonDesktopFolder\"", package, StringComparison.Ordinal);
         Assert.Contains("Id=\"StructVaultStartMenuShortcut\"", package, StringComparison.Ordinal);
         Assert.Contains("Id=\"StructVaultUninstallShortcut\"", package, StringComparison.Ordinal);
         Assert.Contains("Target=\"[System64Folder]msiexec.exe\"", package, StringComparison.Ordinal);

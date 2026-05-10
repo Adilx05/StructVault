@@ -25,10 +25,10 @@
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="StructVault" />
     </StandardDirectory>
-    <StandardDirectory Id="ProgramMenuFolder">
+    <StandardDirectory Id="CommonProgramsFolder">
       <Directory Id="ApplicationProgramsFolder" Name="StructVault" />
     </StandardDirectory>
-    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="CommonDesktopFolder" />
   </Fragment>
 
   <Fragment>
@@ -40,7 +40,7 @@
   <Fragment>
     <Component Id="DesktopShortcut" Directory="INSTALLFOLDER" Guid="56C0AE67-94DE-4E48-8B79-0E3A215C3CE5">
       <Shortcut Id="StructVaultDesktopShortcut"
-                Directory="DesktopFolder"
+                Directory="CommonDesktopFolder"
                 Name="StructVault"
                 Description="Open StructVault"
                 Target="[INSTALLFOLDER]StructVault.Desktop.exe"
