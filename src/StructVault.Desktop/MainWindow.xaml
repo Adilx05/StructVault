@@ -61,14 +61,38 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0"
-                               FontWeight="SemiBold"
-                               Text="{Binding Key}"
-                               TextWrapping="Wrap" />
+                    <DockPanel Grid.Row="0" LastChildFill="True">
+                        <Button DockPanel.Dock="Right"
+                                MinWidth="70"
+                                Margin="8,0,0,0"
+                                Padding="8,3"
+                                Command="{Binding Tag.CopyFieldValueCommand, RelativeSource={RelativeSource AncestorType=Border}}"
+                                CommandParameter="{Binding}"
+                                Content="Copy" />
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="{Binding Key}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                       Text="Sensitive value hidden. Use Copy to copy the real value."
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSensitive}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </DockPanel>
                     <TextBox Grid.Row="1"
                              Margin="0,6,0,0"
                              IsReadOnly="True"
-                             Text="{Binding DisplayValue, Mode=OneWay}"
+                             Text="{Binding DisplayText, Mode=OneWay}"
                              TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" />
                 </Grid>

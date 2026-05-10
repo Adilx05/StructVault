@@ -54,7 +54,7 @@ public sealed class VaultExitPromptViewModelTests
     }
 
     [Fact]
-    public async Task ConfirmExitAllowsDiscardWhenDirtyVaultHasNoSaveTarget()
+    public async Task ConfirmExitAllowsDiscardWhenDirtyVaultWouldPromptForSaveTarget()
     {
         RecordingContextMenuInputService inputService = new()
         {
@@ -72,7 +72,7 @@ public sealed class VaultExitPromptViewModelTests
 
         Assert.True(shouldExit);
         Assert.True(viewModel.IsDirty);
-        Assert.Single(inputService.PromptCanSaveValues, value => !value);
+        Assert.Single(inputService.PromptCanSaveValues, value => value);
         Assert.Empty(sender.HandledRequests.OfType<TrySaveQpsVaultFileCommand>());
     }
 

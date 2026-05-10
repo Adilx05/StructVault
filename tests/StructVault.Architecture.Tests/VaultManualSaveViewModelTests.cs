@@ -33,17 +33,28 @@ public sealed class VaultManualSaveViewModelTests
     }
 
     [Fact]
-    public async Task SaveCommandIsDisabledUntilManualSaveTargetIsConfigured()
+    public async Task SaveCommandPromptsForManualSaveTargetWhenNoneIsConfigured()
     {
         RecordingSender sender = new();
-        MainWindowViewModel viewModel = new(sender);
+        RecordingContextMenuInputService inputService = new()
+        {
+            SaveTarget = new VaultSaveTargetInput("vault.qps", "save-password")
+        };
+        MainWindowViewModel viewModel = new(sender, inputService);
         await using SqliteConnection connection = new("Data Source=:memory:");
         await connection.OpenAsync();
 
         await viewModel.LoadVaultTreeAsync(connection);
 
-        Assert.False(viewModel.CanSave);
-        Assert.False(viewModel.SaveVaultCommand.CanExecute(null));
+        Assert.True(viewModel.CanSave);
+        Assert.True(viewModel.SaveVaultCommand.CanExecute(null));
+
+        await ((AsyncCommand)viewModel.SaveVaultCommand).ExecuteAsync();
+
+        TrySaveQpsVaultFileCommand command = Assert.Single(sender.Requests.OfType<TrySaveQpsVaultFileCommand>());
+        Assert.Same(connection, command.Connection);
+        Assert.Equal("vault.qps", command.FilePath);
+        Assert.Equal("save-password", command.Password);
     }
 
 
@@ -75,6 +86,27 @@ public sealed class VaultManualSaveViewModelTests
         MainWindowViewModel viewModel = new(new RecordingSender());
 
         Assert.Throws<ArgumentException>(() => viewModel.ConfigureManualSaveTarget("vault.qps", " "));
+    }
+
+    private sealed class RecordingContextMenuInputService : IContextMenuInputService
+    {
+        public VaultSaveTargetInput? SaveTarget { get; init; }
+
+        public string? RequestNodeName(string title, string message, string? initialName = null) => null;
+
+        public VaultFieldInput? RequestField(string title, string keyMessage, string valueMessage, VaultFieldInput? initialValue = null) => null;
+
+        public string? RequestPassword(string title, string message) => null;
+
+        public VaultSaveTargetInput? RequestSaveTarget(string title, string message) => SaveTarget;
+
+        public bool ConfirmDelete(string title, string message) => false;
+
+        public UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave) => UnsavedChangesExitChoice.CancelExit;
+
+        public void ShowValidationError(string title, string message)
+        {
+        }
     }
 
     private sealed class RecordingSender : ISender
