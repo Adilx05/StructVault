@@ -72,6 +72,9 @@ internal sealed class DesktopVaultSender : ISender
             GetIdleLockSettingsQuery query => await new GetIdleLockSettingsQueryHandler(settingStore)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
+            GetThemeSettingsQuery query => await new GetThemeSettingsQueryHandler(settingStore)
+                .Handle(query, cancellationToken)
+                .ConfigureAwait(false),
             GetVaultNodeByIdQuery query => await new GetVaultNodeByIdQueryHandler(nodeStore)
                 .Handle(query, cancellationToken)
                 .ConfigureAwait(false),
@@ -169,6 +172,11 @@ internal sealed class DesktopVaultSender : ISender
                     .Handle(command, cancellationToken)
                     .ConfigureAwait(false);
                 break;
+            case SaveThemeSettingsCommand command:
+                await new SaveThemeSettingsCommandHandler(settingStore)
+                    .Handle(command, cancellationToken)
+                    .ConfigureAwait(false);
+                break;
             case SaveQpsVaultFileCommand command:
                 await new SaveQpsVaultFileCommandHandler(databaseSerializer, keyDerivationService, encryptionService, backupService, fileWriter)
                     .Handle(command, cancellationToken)
@@ -218,6 +226,8 @@ internal sealed class DesktopVaultSender : ISender
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case GetIdleLockSettingsQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
+            case GetThemeSettingsQuery query:
+                return await Send(query, cancellationToken).ConfigureAwait(false);
             case GetVaultNodeByIdQuery query:
                 return await Send(query, cancellationToken).ConfigureAwait(false);
             case ListVaultFieldsByNodeIdQuery query:
@@ -238,6 +248,9 @@ internal sealed class DesktopVaultSender : ISender
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
             case SaveIdleLockSettingsCommand command:
+                await Send(command, cancellationToken).ConfigureAwait(false);
+                return null;
+            case SaveThemeSettingsCommand command:
                 await Send(command, cancellationToken).ConfigureAwait(false);
                 return null;
             case CreateQpsVaultFileCommand command:

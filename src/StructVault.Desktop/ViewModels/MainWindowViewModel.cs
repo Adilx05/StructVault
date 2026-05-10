@@ -10,6 +10,7 @@ using StructVault.Application.IdleLock;
 using StructVault.Application.Persistence;
 using StructVault.Application.Qps;
 using StructVault.Desktop.Commands;
+using StructVault.Desktop.Services;
 
 namespace StructVault.Desktop.ViewModels;
 
@@ -22,10 +23,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         new(SearchVaultFilter.Nodes, "Nodes"),
         new(SearchVaultFilter.Fields, "Fields")
     ];
+    private static readonly IReadOnlyList<VaultThemeOption> AvailableThemeOptions =
+    [
+        new(ThemeSettingsRecord.LightBlueThemeName, "Light"),
+        new(ThemeSettingsRecord.DarkBlueThemeName, "Dark")
+    ];
 
     private readonly ISender sender;
     private readonly IContextMenuInputService contextMenuInputService;
     private readonly UiResponsivenessOptions uiResponsivenessOptions;
+    private readonly IThemeService themeService;
     private readonly ObservableCollection<VaultTreeNodeViewModel> vaultNodes = new();
     private readonly ObservableCollection<VaultFieldViewModel> selectedFields = new();
     private readonly ObservableCollection<VaultSearchResultViewModel> searchResults = new();
@@ -44,6 +51,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool isIdleLockEnabled = true;
     private TimeSpan idleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
     private string idleLockSettingsStatusText = "Idle lock settings use secure defaults.";
+    private string selectedThemeName = ThemeSettingsRecord.Default.ThemeName;
+    private string themeSettingsStatusText = "Theme settings use the default light theme.";
     private string vaultErrorMessage = string.Empty;
     private string loadingStatusText = "Ready.";
     private bool isVaultLocked;
@@ -65,10 +74,20 @@ public sealed class MainWindowViewModel : ViewModelBase
         ISender sender,
         IContextMenuInputService contextMenuInputService,
         UiResponsivenessOptions uiResponsivenessOptions)
+        : this(sender, contextMenuInputService, uiResponsivenessOptions, new MahAppsThemeService())
+    {
+    }
+
+    public MainWindowViewModel(
+        ISender sender,
+        IContextMenuInputService contextMenuInputService,
+        UiResponsivenessOptions uiResponsivenessOptions,
+        IThemeService themeService)
     {
         this.sender = sender ?? throw new ArgumentNullException(nameof(sender));
         this.contextMenuInputService = contextMenuInputService ?? throw new ArgumentNullException(nameof(contextMenuInputService));
         this.uiResponsivenessOptions = uiResponsivenessOptions ?? throw new ArgumentNullException(nameof(uiResponsivenessOptions));
+        this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
         readOnlyVaultNodes = new ReadOnlyObservableCollection<VaultTreeNodeViewModel>(vaultNodes);
         readOnlySelectedFields = new ReadOnlyObservableCollection<VaultFieldViewModel>(selectedFields);
         readOnlySearchResults = new ReadOnlyObservableCollection<VaultSearchResultViewModel>(searchResults);
@@ -85,6 +104,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         CopyFieldValueCommand = new AsyncCommand(CopyFieldValueAsync, CanMutateField);
         ApplyClipboardSettingsCommand = new AsyncCommand(ApplyClipboardSettingsAsync, CanMutateVault);
         ApplyIdleLockSettingsCommand = new AsyncCommand(ApplyIdleLockSettingsAsync, CanMutateVault);
+        ApplyThemeSettingsCommand = new AsyncCommand(ApplyThemeSettingsAsync, CanMutateVault);
         UnlockVaultCommand = new AsyncCommand(UnlockVaultAsync, CanUnlockVault);
     }
 
@@ -95,6 +115,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ReadOnlyObservableCollection<VaultSearchResultViewModel> SearchResults => readOnlySearchResults;
 
     public IReadOnlyList<VaultSearchFilterOption> SearchFilterOptions => AvailableSearchFilterOptions;
+
+    public IReadOnlyList<VaultThemeOption> ThemeOptions => AvailableThemeOptions;
 
     public ICommand SaveVaultCommand { get; }
 
@@ -119,6 +141,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand ApplyClipboardSettingsCommand { get; }
 
     public ICommand ApplyIdleLockSettingsCommand { get; }
+
+    public ICommand ApplyThemeSettingsCommand { get; }
 
     public ICommand UnlockVaultCommand { get; }
 
@@ -289,6 +313,18 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref idleLockSettingsStatusText, value);
     }
 
+    public string SelectedThemeName
+    {
+        get => selectedThemeName;
+        set => SetProperty(ref selectedThemeName, ThemeSettingsRecord.NormalizeThemeName(value));
+    }
+
+    public string ThemeSettingsStatusText
+    {
+        get => themeSettingsStatusText;
+        private set => SetProperty(ref themeSettingsStatusText, value);
+    }
+
     public bool IsVaultLocked
     {
         get => isVaultLocked;
@@ -432,6 +468,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         IsVaultLocked = false;
         await LoadClipboardSettingsAsync(cancellationToken).ConfigureAwait(true);
         await LoadIdleLockSettingsAsync(cancellationToken).ConfigureAwait(true);
+        await LoadThemeSettingsAsync(cancellationToken).ConfigureAwait(true);
         await RefreshVaultTreeAsync(null, cancellationToken).ConfigureAwait(true);
         SearchText = string.Empty;
         SelectedSearchFilter = SearchVaultFilter.All;
@@ -889,6 +926,26 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private async Task ApplyThemeSettingsAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        try
+        {
+            using IDisposable loadingScope = BeginLoading("Saving theme settings...");
+            string themeName = ThemeSettingsRecord.NormalizeThemeName(SelectedThemeName);
+            await sender.Send(
+                new SaveThemeSettingsCommand(connection, themeName),
+                cancellationToken).ConfigureAwait(true);
+            themeService.ApplyTheme(themeName);
+            ThemeSettingsStatusText = "Theme settings saved and applied. Save the vault file to persist them on disk.";
+            MarkDirty();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            contextMenuInputService.ShowValidationError("Settings failed", "Theme settings could not be saved. " + ex.Message);
+        }
+    }
+
     private async Task CopyFieldValueAsync(object? parameter, CancellationToken cancellationToken)
     {
         VaultFieldViewModel field = RequireFieldParameter(parameter);
@@ -948,6 +1005,26 @@ public sealed class MainWindowViewModel : ViewModelBase
             IsIdleLockEnabled = IdleLockSettingsRecord.Default.IsEnabled;
             IdleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
             IdleLockSettingsStatusText = "Idle lock settings reset to secure defaults because saved settings could not be loaded.";
+        }
+    }
+
+    private async Task LoadThemeSettingsAsync(CancellationToken cancellationToken)
+    {
+        DbConnection connection = RequireActiveOpenConnection();
+        try
+        {
+            ThemeSettingsRecord settings = await sender
+                .Send(new GetThemeSettingsQuery(connection), cancellationToken)
+                .ConfigureAwait(true);
+            SelectedThemeName = settings.ThemeName;
+            themeService.ApplyTheme(settings.ThemeName);
+            ThemeSettingsStatusText = "Theme settings loaded and applied.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            SelectedThemeName = ThemeSettingsRecord.Default.ThemeName;
+            themeService.ApplyTheme(ThemeSettingsRecord.Default.ThemeName);
+            ThemeSettingsStatusText = "Theme settings reset to the default light theme because saved settings could not be loaded.";
         }
     }
 
@@ -1143,6 +1220,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaiseCanExecuteChanged(CopyFieldValueCommand);
         RaiseCanExecuteChanged(ApplyClipboardSettingsCommand);
         RaiseCanExecuteChanged(ApplyIdleLockSettingsCommand);
+        RaiseCanExecuteChanged(ApplyThemeSettingsCommand);
         RaiseCanExecuteChanged(UnlockVaultCommand);
     }
 
