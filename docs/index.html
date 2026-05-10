@@ -112,34 +112,53 @@
                     </div>
                     <div class="mockup-content">
                         <div class="mockup-sidebar">
-                            <div class="mockup-tree-item active">
-                                <span class="tree-icon">📁</span> Work Credentials
-                            </div>
-                            <div class="mockup-tree-item nested">
-                                <span class="tree-icon">📁</span> Servers
-                            </div>
-                            <div class="mockup-tree-item nested">
-                                <span class="tree-icon">📁</span> API Keys
-                            </div>
-                            <div class="mockup-tree-item">
-                                <span class="tree-icon">📁</span> Personal
+                            <div class="tree-branch">
+                                <div class="mockup-tree-item active">
+                                    <span class="tree-icon">📁</span> Work Credentials
+                                </div>
+                                <div class="tree-children">
+                                    <div class="mockup-tree-item">
+                                        <span class="tree-icon">📁</span> Production Servers
+                                    </div>
+                                    <div class="mockup-tree-item">
+                                        <span class="tree-icon">📁</span> API Keys
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="mockup-details">
-                            <div class="mockup-field">
-                                <span class="field-key">SSH Key</span>
-                                <span class="field-value masked">•••••••••••••••</span>
-                                <button class="mockup-btn">Copy</button>
+                        <div class="mockup-main">
+                            <div class="mockup-tab">
+                                <span class="tab-icon">📁</span> Production Servers
                             </div>
-                            <div class="mockup-field">
-                                <span class="field-key">Password</span>
-                                <span class="field-value masked">•••••••••••••••</span>
-                                <button class="mockup-btn">Copy</button>
-                            </div>
-                            <div class="mockup-field">
-                                <span class="field-key">Username</span>
-                                <span class="field-value">admin@company.com</span>
-                                <button class="mockup-btn">Copy</button>
+                            <div class="mockup-details">
+                                <div class="mockup-search">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    </svg>
+                                    <span>Search vault...</span>
+                                </div>
+                                <div class="mockup-item selected">
+                                    <div class="mockup-item-icon">🔑</div>
+                                    <div class="mockup-item-info">
+                                        <div class="mockup-item-title">SSH Key</div>
+                                        <div class="mockup-item-sub">id_ed25519 • production</div>
+                                    </div>
+                                </div>
+                                <div class="mockup-item">
+                                    <div class="mockup-item-icon">🔐</div>
+                                    <div class="mockup-item-info">
+                                        <div class="mockup-item-title">Password</div>
+                                        <div class="mockup-item-sub">DB Password • root</div>
+                                    </div>
+                                </div>
+                                <div class="mockup-item">
+                                    <div class="mockup-item-icon">👤</div>
+                                    <div class="mockup-item-info">
+                                        <div class="mockup-item-title">Username</div>
+                                        <div class="mockup-item-sub">admin@server.local</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -274,44 +293,55 @@
             </div>
             <div class="security-diagram">
                 <div class="diagram-step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
+                    <div class="step-circle">
+                        <div class="step-number">1</div>
+                    </div>
+                    <div class="step-text">
                         <h4>Enter Password</h4>
                         <p>Your master password is the only secret needed</p>
                     </div>
                 </div>
                 <div class="diagram-arrow">
-                    <svg width="40" height="24" viewBox="0 0 40 24">
-                        <path d="M0 12h36M30 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
                     </svg>
                 </div>
                 <div class="diagram-step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
+                    <div class="step-circle">
+                        <div class="step-number">2</div>
+                    </div>
+                    <div class="step-text">
                         <h4>Derive Key</h4>
                         <p>Argon2id derives a unique key from password + salt</p>
                     </div>
                 </div>
                 <div class="diagram-arrow">
-                    <svg width="40" height="24" viewBox="0 0 40 24">
-                        <path d="M0 12h36M30 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
                     </svg>
                 </div>
                 <div class="diagram-step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
+                    <div class="step-circle">
+                        <div class="step-number">3</div>
+                    </div>
+                    <div class="step-text">
                         <h4>Encrypt Data</h4>
                         <p>AES-256-GCM encrypts the SQLite database</p>
                     </div>
                 </div>
                 <div class="diagram-arrow">
-                    <svg width="40" height="24" viewBox="0 0 40 24">
-                        <path d="M0 12h36M30 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
                     </svg>
                 </div>
                 <div class="diagram-step">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
+                    <div class="step-circle">
+                        <div class="step-number">4</div>
+                    </div>
+                    <div class="step-text">
                         <h4>Save Vault</h4>
                         <p>Encrypted vault written securely to disk</p>
                     </div>
@@ -394,19 +424,19 @@
                     <div class="step-number">1</div>
                     <h3>Download</h3>
                     <p>Download the latest release from GitHub. No installation required — it's a portable application.</p>
-                    <code>git clone https://github.com/Adilx05/StructVault.git</code>
+                    <div class="code-block">git clone https://github.com/Adilx05/StructVault.git</div>
                 </div>
                 <div class="step-card">
                     <div class="step-number">2</div>
                     <h3>Build</h3>
                     <p>Build the solution using .NET CLI. Requires .NET 8.0 SDK or later.</p>
-                    <code>dotnet build StructVault.sln</code>
+                    <div class="code-block">dotnet build StructVault.sln</div>
                 </div>
                 <div class="step-card">
                     <div class="step-number">3</div>
                     <h3>Run</h3>
                     <p>Launch the application and create your first vault with a strong master password.</p>
-                    <code>dotnet run --project src/StructVault.Desktop</code>
+                    <div class="code-block">dotnet run --project src/StructVault.Desktop</div>
                 </div>
             </div>
         </div>
@@ -478,7 +508,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>MIT License &copy; 2024-<span id="currentYear"></span> StructVault. Made by <a href="https://github.com/Adilx05" target="_blank" rel="noopener noreferrer" class="author-link">Adil</a> <span class="heart">❤️</span></p>
+                <p>MIT License &copy; 2026-<span id="currentYear"></span> StructVault. Made by <a href="https://github.com/Adilx05" target="_blank" rel="noopener noreferrer" class="author-link">QWRpbA==</a> <span class="heart">❤️</span></p>
             </div>
         </div>
     </footer>
