@@ -7,6 +7,7 @@ using StructVault.Desktop.Services;
 using StructVault.Desktop.ViewModels;
 using StructVault.Persistence.Database;
 using StructVault.Persistence.Schema;
+using Xunit;
 
 namespace StructVault.Architecture.Tests;
 
