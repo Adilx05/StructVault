@@ -1,6 +1,11 @@
 # StructVault
 
-A fast, secure, offline-first structured vault system for Windows. Store sensitive data in encrypted vault files with a hierarchical structure.
+[![Release](https://img.shields.io/github/v/release/Adilx05/StructVault?include_prereleases&label=Release&color=2563eb)](https://github.com/Adilx05/StructVault/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Adilx05/StructVault/total?label=Downloads&color=10b981)](https://github.com/Adilx05/StructVault/releases)
+[![License](https://img.shields.io/github/license/Adilx05/StructVault?label=License&color=f59e0b)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/Adilx05/StructVault?label=Last+Commit&color=64748b)](https://github.com/Adilx05/StructVault/commits/main)
+
+> **StructVault** — A fast, secure, offline-first structured vault system for Windows. Store sensitive data in encrypted vault files with a hierarchical structure.
 
 ## Features
 
@@ -109,6 +114,12 @@ src/
 tests/
   StructVault.Architecture.Tests/ - Architecture and integration tests
 ```
+
+## Download & Install
+
+Download the latest release from the [Releases](https://github.com/Adilx05/StructVault/releases/latest) page.
+
+Run the MSI installer to set up StructVault with Start Menu and Desktop shortcuts. Vault files (`.qps`) are automatically associated with StructVault after installation.
 
 ## License
 
