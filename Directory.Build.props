@@ -2,7 +2,7 @@
   <PropertyGroup>
     <VersionMajor>1</VersionMajor>
     <VersionMinor>0</VersionMinor>
-    <VersionPatch Condition="'$(VersionPatch)' == ''">0</VersionPatch>
+    <VersionPatch Condition="'$(VersionPatch)' == ''">3</VersionPatch>
     <VersionPrefix>$(VersionMajor).$(VersionMinor).$(VersionPatch)</VersionPrefix>
     <Version>$(VersionPrefix)</Version>
     <AssemblyVersion>$(VersionMajor).$(VersionMinor).0.0</AssemblyVersion>
