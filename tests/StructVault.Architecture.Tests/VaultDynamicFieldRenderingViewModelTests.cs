@@ -171,6 +171,21 @@ public sealed class VaultDynamicFieldRenderingViewModelTests
         Assert.Equal(3, viewModel.ValueLength);
     }
 
+
+    [Fact]
+    public void SensitiveFieldDisplayMasksValueWithoutChangingCopySourceValue()
+    {
+        DateTimeOffset timestamp = DateTimeOffset.UtcNow;
+        VaultFieldRecord field = CreateField("field-password", "node-root", "Password", "correct-horse-battery", 0, timestamp);
+
+        VaultFieldViewModel viewModel = new(field);
+
+        Assert.True(viewModel.IsSensitive);
+        Assert.Equal("correct-horse-battery", viewModel.DisplayValue);
+        Assert.NotEqual(viewModel.DisplayValue, viewModel.DisplayText);
+        Assert.All(viewModel.DisplayText, character => Assert.Equal('•', character));
+    }
+
     private static VaultNodeHierarchyRecord CreateNode(string id, string name, DateTimeOffset timestamp)
     {
         return new VaultNodeHierarchyRecord(id, null, name, 0, timestamp, timestamp, Array.Empty<VaultNodeHierarchyRecord>());

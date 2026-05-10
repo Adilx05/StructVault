@@ -505,6 +505,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ClearVaultError();
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(CanUnlock));
+        RaiseCanExecuteChanged(SaveVaultCommand);
     }
 
     public async Task SaveVaultAsync(CancellationToken cancellationToken = default)
@@ -750,12 +751,24 @@ public sealed class MainWindowViewModel : ViewModelBase
         DbConnection connection = RequireActiveOpenConnection();
         if (string.IsNullOrWhiteSpace(activeVaultFilePath) || string.IsNullOrWhiteSpace(activeVaultPassword))
         {
-            throw new InvalidOperationException("A vault file path and password must be configured before manual save.");
+            VaultSaveTargetInput? saveTarget = contextMenuInputService.RequestSaveTarget(
+                "Save vault",
+                "Enter a non-empty master password for this encrypted vault file.");
+            VaultSaveTargetInput? normalizedSaveTarget = NormalizeRequiredSaveTargetInput(saveTarget);
+            if (normalizedSaveTarget is null)
+            {
+                return;
+            }
+
+            ConfigureManualSaveTarget(normalizedSaveTarget.FilePath, normalizedSaveTarget.Password);
         }
+
+        string filePath = activeVaultFilePath!;
+        string password = activeVaultPassword!;
 
         using IDisposable loadingScope = BeginLoading("Saving vault...");
         VaultOperationResult result = await sender.Send(
-            new TrySaveQpsVaultFileCommand(connection, activeVaultFilePath, activeVaultPassword),
+            new TrySaveQpsVaultFileCommand(connection, filePath, password),
             cancellationToken).ConfigureAwait(true);
 
         if (result.IsFailure)
@@ -1240,11 +1253,15 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void MarkDirty()
     {
         IsDirty = true;
+        OnPropertyChanged(nameof(CanSave));
+        RaiseCanExecuteChanged(SaveVaultCommand);
     }
 
     private void SetClean()
     {
         IsDirty = false;
+        OnPropertyChanged(nameof(CanSave));
+        RaiseCanExecuteChanged(SaveVaultCommand);
     }
 
     private bool CanMutateVault(object? parameter)
@@ -1254,9 +1271,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private bool CanSaveVault(object? parameter)
     {
-        return CanMutateVault(parameter) &&
-            !string.IsNullOrWhiteSpace(activeVaultFilePath) &&
-            !string.IsNullOrWhiteSpace(activeVaultPassword);
+        return CanMutateVault(parameter);
     }
 
     private bool CanSearchVault(object? parameter)
@@ -1346,6 +1361,28 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         return normalizedValue;
+    }
+
+    private VaultSaveTargetInput? NormalizeRequiredSaveTargetInput(VaultSaveTargetInput? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        string? filePath = NormalizeRequiredUserText(value.FilePath, "Vault file", "A QPS vault file path is required.");
+        if (filePath is null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(value.Password))
+        {
+            contextMenuInputService.ShowValidationError("Vault password", "A non-empty master password is required.");
+            return null;
+        }
+
+        return new VaultSaveTargetInput(filePath, value.Password);
     }
 
     private VaultFieldInput? NormalizeRequiredFieldInput(VaultFieldInput? value)

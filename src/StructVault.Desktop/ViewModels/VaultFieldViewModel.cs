@@ -17,6 +17,8 @@ public sealed class VaultFieldViewModel : ViewModelBase
         SortOrder = field.SortOrder;
         ValueLength = field.Value.Length;
         DisplayValue = CreateDisplayValue(field.Value);
+        IsSensitive = VaultFieldTypeCatalog.IsSensitiveKey(Key);
+        DisplayText = IsSensitive ? CreateMaskedDisplayValue(DisplayValue) : DisplayValue;
     }
 
     public string Id { get; }
@@ -27,9 +29,23 @@ public sealed class VaultFieldViewModel : ViewModelBase
 
     public string DisplayValue { get; }
 
+    public string DisplayText { get; }
+
+    public bool IsSensitive { get; }
+
     public int ValueLength { get; }
 
     public int SortOrder { get; }
+
+    private static string CreateMaskedDisplayValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return new string('•', Math.Clamp(value.Length, 8, 32));
+    }
 
     private static string CreateDisplayValue(byte[] value)
     {
