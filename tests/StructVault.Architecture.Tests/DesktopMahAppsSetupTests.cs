@@ -30,6 +30,16 @@ public sealed class DesktopMahAppsSetupTests
         Assert.Contains("MahApps.Metro;component/Styles/Fonts.xaml", appXaml, StringComparison.Ordinal);
         Assert.Contains("MahApps.Metro;component/Styles/Themes/Light.Blue.xaml", appXaml, StringComparison.Ordinal);
     }
+    [Fact]
+    public void ContextMenuInputServiceUsesMahAppsDialogsInsteadOfSystemMessageBox()
+    {
+        string inputService = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/ViewModels/ContextMenuInputService.cs"));
+
+        Assert.Contains("MetroWindow dialog = new()", inputService, StringComparison.Ordinal);
+        Assert.Contains("ShowMahAppsChoiceDialog", inputService, StringComparison.Ordinal);
+        Assert.DoesNotContain("MessageBox.Show", inputService, StringComparison.Ordinal);
+    }
+
 
     [Fact]
     public void MainWindowUsesMetroWindowShell()
