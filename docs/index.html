@@ -10,7 +10,7 @@
     <meta name="title" content="StructVault - Secure Offline Structured Vault System">
     <meta name="description" content="StructVault is a fast, secure, offline-first structured vault system for Windows. Store sensitive data in AES-256-GCM encrypted vault files with a hierarchical structure.">
     <meta name="keywords" content="vault, password manager, encryption, AES-256-GCM, Argon2id, offline, secure storage, structured data, WPF, .NET">
-    <meta name="author" content="Adil">
+    <meta name="author" content="Abdulkerim Köse">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -103,63 +103,47 @@
                 </div>
             </div>
             <div class="hero-visual">
-                <div class="vault-mockup">
-                    <div class="mockup-header">
-                        <div class="mockup-dot"></div>
-                        <div class="mockup-dot"></div>
-                        <div class="mockup-dot"></div>
-                        <span class="mockup-title">StructVault</span>
+                <div class="vault-mockup" aria-label="StructVault desktop application mockup">
+                    <div class="mockup-titlebar">
+                        <span class="mockup-window-title">StructVault</span>
+                        <div class="mockup-window-controls" aria-hidden="true">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
                     </div>
-                    <div class="mockup-content">
-                        <div class="mockup-sidebar">
-                            <div class="tree-branch">
-                                <div class="mockup-tree-item active">
-                                    <span class="tree-icon">📁</span> Work Credentials
-                                </div>
-                                <div class="tree-children">
-                                    <div class="mockup-tree-item">
-                                        <span class="tree-icon">📁</span> Production Servers
-                                    </div>
-                                    <div class="mockup-tree-item">
-                                        <span class="tree-icon">📁</span> API Keys
-                                    </div>
-                                </div>
+                    <div class="mockup-app-shell">
+                        <div class="mockup-app-header">
+                            <div class="mockup-brand-row">
+                                <strong>StructVault</strong>
+                                <span>Offline structured vault</span>
+                            </div>
+                            <div class="mockup-actions">
+                                <button type="button">Open QPS</button>
+                                <button type="button">Save</button>
                             </div>
                         </div>
-                        <div class="mockup-main">
-                            <div class="mockup-tab">
-                                <span class="tab-icon">📁</span> Production Servers
-                            </div>
-                            <div class="mockup-details">
-                                <div class="mockup-search">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="11" cy="11" r="8"/>
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                    </svg>
-                                    <span>Search vault...</span>
+                        <div class="mockup-tabs">
+                            <span class="active">Vault</span>
+                            <span>Settings</span>
+                        </div>
+                        <div class="mockup-workspace">
+                            <aside class="mockup-panel mockup-sidebar">
+                                <h3>Vault structure</h3>
+                                <div class="mockup-search-row">
+                                    <span class="mockup-input"></span>
+                                    <span class="mockup-select">All</span>
+                                    <span class="mockup-search-button">Search</span>
                                 </div>
-                                <div class="mockup-item selected">
-                                    <div class="mockup-item-icon">🔑</div>
-                                    <div class="mockup-item-info">
-                                        <div class="mockup-item-title">SSH Key</div>
-                                        <div class="mockup-item-sub">id_ed25519 • production</div>
-                                    </div>
+                                <p>Enter text to search nodes and fields.</p>
+                                <div class="mockup-tree-placeholder"></div>
+                            </aside>
+                            <section class="mockup-panel mockup-details">
+                                <div class="mockup-details-heading">
+                                    <h3>Details</h3>
+                                    <p>Select a vault node to view its fields.</p>
                                 </div>
-                                <div class="mockup-item">
-                                    <div class="mockup-item-icon">🔐</div>
-                                    <div class="mockup-item-info">
-                                        <div class="mockup-item-title">Password</div>
-                                        <div class="mockup-item-sub">DB Password • root</div>
-                                    </div>
-                                </div>
-                                <div class="mockup-item">
-                                    <div class="mockup-item-icon">👤</div>
-                                    <div class="mockup-item-info">
-                                        <div class="mockup-item-title">Username</div>
-                                        <div class="mockup-item-sub">admin@server.local</div>
-                                    </div>
-                                </div>
-                            </div>
+                            </section>
                         </div>
                     </div>
                 </div>
