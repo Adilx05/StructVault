@@ -171,9 +171,9 @@ public sealed class MainWindowLayoutTests
     {
         string codeBehind = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml.cs"));
 
-        Assert.Contains("ConfigureDefaultViewModel();", codeBehind);
+        Assert.Contains("ConfigureDefaultViewModel(initialVaultFilePath);", codeBehind);
         Assert.Contains("DataContext = new MainWindowViewModel(sender);", codeBehind);
-        Assert.Contains("LoadInitialVaultAsync(sender)", codeBehind);
+        Assert.Contains("LoadInitialVaultAsync(sender, initialVaultFilePath)", codeBehind);
         Assert.Contains("LoadApplicationSettings()", codeBehind);
         Assert.Contains("TryOpenLastVaultAsync()", codeBehind);
         Assert.Contains("new CreateInMemoryVaultDatabaseCommand()", codeBehind);

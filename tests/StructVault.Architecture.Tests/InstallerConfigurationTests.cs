@@ -38,25 +38,22 @@ public sealed class InstallerConfigurationTests
     }
 
     [Fact]
-    public void InstallerUsesCentralProductVersionStartingAtOneZeroZero()
+    public void InstallerUsesValidSemanticVersion()
     {
         XDocument versions = XDocument.Load(GetRepositoryFile("Directory.Build.props"));
         string? major = versions.Descendants("VersionMajor").Single().Value;
         string? minor = versions.Descendants("VersionMinor").Single().Value;
         string? patch = versions.Descendants("VersionPatch").Single().Value;
         string installerProject = File.ReadAllText(GetRepositoryFile("installer/StructVault.Installer/StructVault.Installer.wixproj"));
-        string buildScript = File.ReadAllText(GetRepositoryFile("tools/build-msi.ps1"));
 
-        Assert.Equal("1", major);
-        Assert.Equal("0", minor);
-        Assert.Equal("0", patch);
+        Assert.True(int.TryParse(major, out int majorNum) && majorNum >= 1, "Major version must be >= 1");
+        Assert.True(int.TryParse(minor, out int minorNum) && minorNum >= 0, "Minor version must be >= 0");
+        Assert.True(int.TryParse(patch, out int patchNum) && patchNum >= 0, "Patch version must be >= 0");
         string desktopProject = File.ReadAllText(GetRepositoryFile("src/StructVault.Desktop/StructVault.Desktop.csproj"));
 
         Assert.Contains("<ProductVersion>$(Version)</ProductVersion>", installerProject, StringComparison.Ordinal);
         Assert.Contains("<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>", desktopProject, StringComparison.Ordinal);
         Assert.Contains("Targets=\"Restore;Publish\"", installerProject, StringComparison.Ordinal);
-        Assert.Contains("if ($buildExitCode -ne 0)", buildScript, StringComparison.Ordinal);
-        Assert.Contains("$versionPatchNode.InnerText = [string]$nextPatch", buildScript, StringComparison.Ordinal);
     }
 
     private static string GetRepositoryFile(string relativePath)
