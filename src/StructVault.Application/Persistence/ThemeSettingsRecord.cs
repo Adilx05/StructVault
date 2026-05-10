@@ -3,12 +3,22 @@ namespace StructVault.Application.Persistence;
 public sealed record ThemeSettingsRecord
 {
     public const string LightBlueThemeName = "Light.Blue";
-    public const string DarkBlueThemeName = "Dark.Blue";
+    public const string LightEmeraldThemeName = "Light.Emerald";
+    public const string LightGreenThemeName = "Light.Green";
+    public const string LightOrangeThemeName = "Light.Orange";
+    public const string LightPurpleThemeName = "Light.Purple";
+    public const string LightRedThemeName = "Light.Red";
+    public const string LightTealThemeName = "Light.Teal";
 
     private static readonly string[] SupportedThemeNames =
     [
         LightBlueThemeName,
-        DarkBlueThemeName
+        LightEmeraldThemeName,
+        LightGreenThemeName,
+        LightOrangeThemeName,
+        LightPurpleThemeName,
+        LightRedThemeName,
+        LightTealThemeName
     ];
 
     public ThemeSettingsRecord(string themeName)

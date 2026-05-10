@@ -25,8 +25,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     ];
     private static readonly IReadOnlyList<VaultThemeOption> AvailableThemeOptions =
     [
-        new(ThemeSettingsRecord.LightBlueThemeName, "Light"),
-        new(ThemeSettingsRecord.DarkBlueThemeName, "Dark")
+        new(ThemeSettingsRecord.LightBlueThemeName, "Blue"),
+        new(ThemeSettingsRecord.LightEmeraldThemeName, "Emerald"),
+        new(ThemeSettingsRecord.LightGreenThemeName, "Green"),
+        new(ThemeSettingsRecord.LightOrangeThemeName, "Orange"),
+        new(ThemeSettingsRecord.LightPurpleThemeName, "Purple"),
+        new(ThemeSettingsRecord.LightRedThemeName, "Red"),
+        new(ThemeSettingsRecord.LightTealThemeName, "Teal")
     ];
 
     private readonly ISender sender;
@@ -52,7 +57,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private TimeSpan idleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
     private string idleLockSettingsStatusText = "Idle lock settings use secure defaults.";
     private string selectedThemeName = ThemeSettingsRecord.Default.ThemeName;
-    private string themeSettingsStatusText = "Theme settings use the default light theme.";
+    private string themeSettingsStatusText = "Theme settings use the default MahApps color theme.";
     private string vaultErrorMessage = string.Empty;
     private string loadingStatusText = "Ready.";
     private bool isVaultLocked;
@@ -1024,7 +1029,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             SelectedThemeName = ThemeSettingsRecord.Default.ThemeName;
             themeService.ApplyTheme(ThemeSettingsRecord.Default.ThemeName);
-            ThemeSettingsStatusText = "Theme settings reset to the default light theme because saved settings could not be loaded.";
+            ThemeSettingsStatusText = "Theme settings reset to the default MahApps color theme because saved settings could not be loaded.";
         }
     }
 

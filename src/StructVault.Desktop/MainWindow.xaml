@@ -38,8 +38,8 @@
         <DataTemplate DataType="{x:Type viewModels:VaultFieldViewModel}">
             <Border Margin="0,0,0,10"
                     Padding="12"
-                    Background="White"
-                    BorderBrush="#FFE1E1E1"
+                    Background="{DynamicResource MahApps.Brushes.Control.Background}"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
@@ -97,459 +97,456 @@
                     Content="Save" />
             <TextBlock Margin="16,6,0,0"
                        VerticalAlignment="Center"
-                       Foreground="#FF666666"
+                       Foreground="{DynamicResource MahApps.Brushes.Text}"
                        Text="Offline structured vault"
                        TextWrapping="NoWrap" />
         </DockPanel>
 
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Border Grid.Row="0"
-                    Margin="0,0,0,12"
-                    Padding="10"
-                    Background="#FFFFF4E5"
-                    BorderBrush="#FFFFB74D"
-                    BorderThickness="1"
-                    CornerRadius="4">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasVaultError}" Value="True">
-                                <Setter Property="Visibility" Value="Visible" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <TextBlock Foreground="#FF5D4037"
-                           Text="{Binding VaultErrorMessage}"
-                           TextWrapping="Wrap" />
-            </Border>
-
-            <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="300"
-                                      MinWidth="240" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="*"
-                                      MinWidth="420" />
-                </Grid.ColumnDefinitions>
-
-                <Border Grid.Column="0"
-                    Padding="12"
-                    Background="#FFF8F8F8"
-                    BorderBrush="#FFD6D6D6"
-                    BorderThickness="1"
-                    CornerRadius="4">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="IsEnabled" Value="True" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <Grid>
+        <mah:MetroTabControl Grid.Row="1">
+            <TabItem Header="Vault">
+                <Grid Margin="0,12,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0"
-                               Margin="0,0,0,8"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Text="Vault structure" />
-
-                    <StackPanel Grid.Row="1"
-                                Margin="0,0,0,10">
-                        <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right"
-                                    MinWidth="64"
-                                    Margin="8,0,0,0"
-                                    Padding="10,4"
-                                    Command="{Binding SearchVaultCommand}"
-                                    Content="Search" />
-                            <ComboBox DockPanel.Dock="Right"
-                                      Width="84"
-                                      Margin="8,0,0,0"
-                                      DisplayMemberPath="DisplayName"
-                                      ItemsSource="{Binding SearchFilterOptions}"
-                                      SelectedValue="{Binding SelectedSearchFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      SelectedValuePath="Value"
-                                      ToolTip="Limit search results by type" />
-                            <TextBox VerticalContentAlignment="Center"
-                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="Search all vault nodes and fields" />
-                        </DockPanel>
-                        <TextBlock Margin="0,4,0,0"
-                                   Foreground="#FF666666"
-                                   Text="{Binding SearchStatusText}"
+                    <Border Grid.Row="0"
+                            Margin="0,0,0,12"
+                            Padding="10"
+                            Background="{DynamicResource MahApps.Brushes.Accent4}"
+                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasVaultError}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                   Text="{Binding VaultErrorMessage}"
                                    TextWrapping="Wrap" />
-                        <ListBox MaxHeight="150"
-                                 Margin="0,6,0,0"
-                                 BorderBrush="#FFE1E1E1"
-                                 ItemsSource="{Binding SearchResults}"
-                                 SelectionChanged="SearchResultsListBox_SelectionChanged">
-                            <ListBox.Style>
-                                <Style TargetType="ListBox">
-                                    <Setter Property="Visibility" Value="Collapsed" />
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="300"
+                                              MinWidth="240" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="*"
+                                              MinWidth="420" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Padding="12"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="IsEnabled" Value="True" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasSearchResults}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
+                                        <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </ListBox.Style>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="{x:Type viewModels:VaultSearchResultViewModel}">
-                                    <StackPanel Margin="4">
-                                        <TextBlock FontWeight="SemiBold"
-                                                   Text="{Binding Title}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Foreground="#FF666666"
-                                                   Text="{Binding Subtitle}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </StackPanel>
-
-
-                    <TreeView x:Name="VaultTreeView"
-                              Grid.Row="2"
-                              AllowDrop="True"
-                              ItemsSource="{Binding VaultNodes}"
-                              BorderThickness="0"
-                              PreviewMouseLeftButtonDown="VaultTreeView_PreviewMouseLeftButtonDown"
-                              PreviewMouseMove="VaultTreeView_PreviewMouseMove"
-                              Drop="VaultTreeView_Drop"
-                              SelectedItemChanged="VaultTreeView_SelectedItemChanged"
-                              ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              Tag="{Binding}">
-                        <TreeView.ContextMenu>
-                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <MenuItem Command="{Binding AddRootNodeCommand}"
-                                          Header="Add root node" />
-                            </ContextMenu>
-                        </TreeView.ContextMenu>
-                    </TreeView>
-
-                    <Border Grid.Row="3"
-                            Margin="0,10,0,10"
-                            Padding="10"
-                            Background="White"
-                            BorderBrush="#FFE1E1E1"
-                            BorderThickness="1"
-                            CornerRadius="4">
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Clipboard settings" />
-                            <CheckBox Margin="0,8,0,0"
-                                      Content="Auto-clear copied field values"
-                                      IsChecked="{Binding IsClipboardAutoClearEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <DockPanel Margin="0,8,0,0"
-                                       LastChildFill="True">
-                                <TextBlock DockPanel.Dock="Left"
-                                           Margin="0,0,8,0"
-                                           VerticalAlignment="Center"
-                                           Text="Clear after" />
-                                <TextBlock DockPanel.Dock="Right"
-                                           Margin="8,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Text="seconds" />
-                                <mah:NumericUpDown Minimum="1"
-                                                   Interval="1"
-                                                   NumericInputMode="Numbers"
-                                                   Value="{Binding ClipboardAutoClearDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                   ToolTip="Positive whole seconds before StructVault clears an unchanged copied value" />
-                            </DockPanel>
-                            <Button Margin="0,8,0,0"
-                                    Padding="10,4"
-                                    HorizontalAlignment="Left"
-                                    Command="{Binding ApplyClipboardSettingsCommand}"
-                                    Content="Apply settings" />
-                            <TextBlock Margin="0,6,0,0"
-                                       Foreground="#FF666666"
-                                       Text="{Binding ClipboardSettingsStatusText}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Row="4"
-                            Margin="0"
-                            Padding="10"
-                            Background="White"
-                            BorderBrush="#FFE1E1E1"
-                            BorderThickness="1"
-                            CornerRadius="4">
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Idle lock settings" />
-                            <CheckBox Margin="0,8,0,0"
-                                      Content="Lock vault after inactivity"
-                                      IsChecked="{Binding IsIdleLockEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <DockPanel Margin="0,8,0,0"
-                                       LastChildFill="True">
-                                <TextBlock DockPanel.Dock="Left"
-                                           Margin="0,0,8,0"
-                                           VerticalAlignment="Center"
-                                           Text="Lock after" />
-                                <TextBlock DockPanel.Dock="Right"
-                                           Margin="8,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Text="seconds" />
-                                <mah:NumericUpDown Minimum="1"
-                                                   Interval="1"
-                                                   NumericInputMode="Numbers"
-                                                   Value="{Binding IdleLockTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                   ToolTip="Positive whole seconds before StructVault locks the open encrypted vault" />
-                            </DockPanel>
-                            <Button Margin="0,8,0,0"
-                                    Padding="10,4"
-                                    HorizontalAlignment="Left"
-                                    Command="{Binding ApplyIdleLockSettingsCommand}"
-                                    Content="Apply idle lock" />
-                            <TextBlock Margin="0,6,0,0"
-                                       Foreground="#FF666666"
-                                       Text="{Binding IdleLockSettingsStatusText}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Row="5"
-                            Margin="0,10,0,0"
-                            Padding="10"
-                            Background="White"
-                            BorderBrush="#FFE1E1E1"
-                            BorderThickness="1"
-                            CornerRadius="4">
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Theme settings" />
-                            <ComboBox Margin="0,8,0,0"
-                                      DisplayMemberPath="DisplayName"
-                                      ItemsSource="{Binding ThemeOptions}"
-                                      SelectedValue="{Binding SelectedThemeName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      SelectedValuePath="ThemeName"
-                                      ToolTip="Switch between supported MahApps.Metro themes" />
-                            <Button Margin="0,8,0,0"
-                                    Padding="10,4"
-                                    HorizontalAlignment="Left"
-                                    Command="{Binding ApplyThemeSettingsCommand}"
-                                    Content="Apply theme" />
-                            <TextBlock Margin="0,6,0,0"
-                                       Foreground="#FF666666"
-                                       Text="{Binding ThemeSettingsStatusText}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
-                </Grid>
-            </Border>
-
-            <GridSplitter Grid.Column="1"
-                          Width="8"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Background="Transparent"
-                          ResizeBehavior="PreviousAndNext"
-                          ResizeDirection="Columns">
-                <GridSplitter.Style>
-                    <Style TargetType="GridSplitter">
-                        <Setter Property="IsEnabled" Value="True" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </GridSplitter.Style>
-            </GridSplitter>
-
-            <Border Grid.Column="2"
-                    Padding="16"
-                    Background="#FFF8F8F8"
-                    BorderBrush="#FFD6D6D6"
-                    BorderThickness="1"
-                    CornerRadius="4">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="IsEnabled" Value="True" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <DockPanel Grid.Row="0"
-                               Margin="0,0,0,12"
-                               LastChildFill="True">
-                        <TextBlock DockPanel.Dock="Left"
-                                   VerticalAlignment="Center"
-                                   FontSize="18"
-                                   FontWeight="SemiBold"
-                                   Text="Details" />
-                        <TextBlock Margin="12,4,0,0"
-                                   VerticalAlignment="Center"
-                                   Foreground="#FF666666"
-                                   Text="Select a vault node to view its fields."
-                                   TextWrapping="Wrap" />
-                    </DockPanel>
-
-                    <ScrollViewer x:Name="VaultDetailScrollViewer"
-                                  Grid.Row="1"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto">
-                        <Border MinHeight="240"
-                                Padding="24"
-                                BorderBrush="#FFE6E6E6"
-                                BorderThickness="1"
-                                CornerRadius="4">
+                            </Border.Style>
                             <Grid>
-                                <StackPanel HorizontalAlignment="Center"
-                                            VerticalAlignment="Center">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasSelectedNode}" Value="False">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <TextBlock HorizontalAlignment="Center"
-                                               FontSize="16"
-                                               FontWeight="SemiBold"
-                                               Text="No node selected" />
-                                    <TextBlock Margin="0,8,0,0"
-                                               HorizontalAlignment="Center"
-                                               Foreground="#FF666666"
-                                               Text="Choose an item from the vault structure to inspect its details."
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
 
-                                <StackPanel Visibility="{Binding HasSelectedNode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <TextBlock FontSize="20"
-                                               FontWeight="SemiBold"
-                                               Text="{Binding SelectedNodeName}"
+                                <TextBlock Grid.Row="0"
+                                           Margin="0,0,0,8"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Text="Vault structure" />
+
+                                <StackPanel Grid.Row="1"
+                                            Margin="0,0,0,10">
+                                    <DockPanel LastChildFill="True">
+                                        <Button DockPanel.Dock="Right"
+                                                MinWidth="64"
+                                                Margin="8,0,0,0"
+                                                Padding="10,4"
+                                                Command="{Binding SearchVaultCommand}"
+                                                Content="Search" />
+                                        <ComboBox DockPanel.Dock="Right"
+                                                  Width="84"
+                                                  Margin="8,0,0,0"
+                                                  DisplayMemberPath="DisplayName"
+                                                  ItemsSource="{Binding SearchFilterOptions}"
+                                                  SelectedValue="{Binding SelectedSearchFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  SelectedValuePath="Value"
+                                                  ToolTip="Limit search results by type" />
+                                        <TextBox VerticalContentAlignment="Center"
+                                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 ToolTip="Search all vault nodes and fields" />
+                                    </DockPanel>
+                                    <TextBlock Margin="0,4,0,0"
+                                               Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                               Text="{Binding SearchStatusText}"
                                                TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,4,0,16"
-                                               Foreground="#FF666666"
-                                               Text="Fields" />
-                                    <TextBlock Margin="0,0,0,12"
-                                               Foreground="#FF666666"
-                                               Text="This node does not contain any fields."
-                                               TextWrapping="Wrap">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
+                                    <ListBox MaxHeight="150"
+                                             Margin="0,6,0,0"
+                                             BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                             ItemsSource="{Binding SearchResults}"
+                                             SelectionChanged="SearchResultsListBox_SelectionChanged">
+                                        <ListBox.Style>
+                                            <Style TargetType="ListBox">
                                                 <Setter Property="Visibility" Value="Collapsed" />
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasSelectedFields}" Value="False">
+                                                    <DataTrigger Binding="{Binding HasSearchResults}" Value="True">
                                                         <Setter Property="Visibility" Value="Visible" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <ItemsControl x:Name="VaultFieldsItemsControl"
-                                                  AllowDrop="True"
-                                                  Drop="VaultFieldsItemsControl_Drop"
-                                                  ItemsSource="{Binding SelectedFields}"
-                                                  PreviewMouseLeftButtonDown="VaultFieldsItemsControl_PreviewMouseLeftButtonDown"
-                                                  PreviewMouseMove="VaultFieldsItemsControl_PreviewMouseMove" />
+                                        </ListBox.Style>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type viewModels:VaultSearchResultViewModel}">
+                                                <StackPanel Margin="4">
+                                                    <TextBlock FontWeight="SemiBold"
+                                                               Text="{Binding Title}"
+                                                               TextWrapping="Wrap" />
+                                                    <TextBlock Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                                               Text="{Binding Subtitle}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
                                 </StackPanel>
+
+                                <TreeView x:Name="VaultTreeView"
+                                          Grid.Row="2"
+                                          AllowDrop="True"
+                                          ItemsSource="{Binding VaultNodes}"
+                                          BorderThickness="0"
+                                          PreviewMouseLeftButtonDown="VaultTreeView_PreviewMouseLeftButtonDown"
+                                          PreviewMouseMove="VaultTreeView_PreviewMouseMove"
+                                          Drop="VaultTreeView_Drop"
+                                          SelectedItemChanged="VaultTreeView_SelectedItemChanged"
+                                          ScrollViewer.CanContentScroll="True"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                          Tag="{Binding}">
+                                    <TreeView.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Command="{Binding AddRootNodeCommand}"
+                                                      Header="Add root node" />
+                                        </ContextMenu>
+                                    </TreeView.ContextMenu>
+                                </TreeView>
                             </Grid>
                         </Border>
-                    </ScrollViewer>
+
+                        <GridSplitter Grid.Column="1"
+                                      Width="8"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
+                                      Background="Transparent"
+                                      ResizeBehavior="PreviousAndNext"
+                                      ResizeDirection="Columns">
+                            <GridSplitter.Style>
+                                <Style TargetType="GridSplitter">
+                                    <Setter Property="IsEnabled" Value="True" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </GridSplitter.Style>
+                        </GridSplitter>
+
+                        <Border Grid.Column="2"
+                                Padding="16"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="IsEnabled" Value="True" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsVaultLocked}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <DockPanel Grid.Row="0"
+                                           Margin="0,0,0,12"
+                                           LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Left"
+                                               VerticalAlignment="Center"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Text="Details" />
+                                    <TextBlock Margin="12,4,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                               Text="Select a vault node to view its fields."
+                                               TextWrapping="Wrap" />
+                                </DockPanel>
+
+                                <ScrollViewer x:Name="VaultDetailScrollViewer"
+                                              Grid.Row="1"
+                                              BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <Border Padding="12"
+                                            Background="{DynamicResource MahApps.Brushes.Control.Background}"
+                                            CornerRadius="4">
+                                        <Grid>
+                                            <StackPanel Visibility="{Binding HasSelectedNode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock FontSize="20"
+                                                           FontWeight="SemiBold"
+                                                           Text="{Binding SelectedNodeName}"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Margin="0,4,0,16"
+                                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                                           Text="Fields" />
+                                                <TextBlock Margin="0,0,0,12"
+                                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                                           Text="This node does not contain any fields."
+                                                           TextWrapping="Wrap">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasSelectedFields}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <ItemsControl x:Name="VaultFieldsItemsControl"
+                                                              AllowDrop="True"
+                                                              Drop="VaultFieldsItemsControl_Drop"
+                                                              ItemsSource="{Binding SelectedFields}"
+                                                              PreviewMouseLeftButtonDown="VaultFieldsItemsControl_PreviewMouseLeftButtonDown"
+                                                              PreviewMouseMove="VaultFieldsItemsControl_PreviewMouseMove" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.ColumnSpan="3"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Opacity="0.94"
+                                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel MaxWidth="360"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <mah:ProgressRing Width="56"
+                                                  Height="56"
+                                                  HorizontalAlignment="Center"
+                                                  IsActive="{Binding IsLoading}" />
+                                <TextBlock Margin="0,16,0,0"
+                                           HorizontalAlignment="Center"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Text="Working securely" />
+                                <TextBlock Margin="0,8,0,0"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="{Binding LoadingStatusText}"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.ColumnSpan="3"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Opacity="0.96"
+                                Visibility="{Binding IsVaultLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel MaxWidth="420"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock HorizontalAlignment="Center"
+                                           FontSize="24"
+                                           FontWeight="SemiBold"
+                                           Text="Vault locked" />
+                                <TextBlock Margin="0,12,0,0"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="StructVault locked this vault after the configured idle timeout. Enter the master password to unlock it."
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                                <Button Margin="0,18,0,0"
+                                        MinWidth="120"
+                                        Padding="14,7"
+                                        HorizontalAlignment="Center"
+                                        Command="{Binding UnlockVaultCommand}"
+                                        Content="Unlock" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Grid>
-            </Border>
+            </TabItem>
 
-            <Border Grid.ColumnSpan="3"
-                    Background="#DFFFFFFF"
-                    BorderBrush="#FFB0B0B0"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <StackPanel MaxWidth="360"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <mah:ProgressRing Width="56"
-                                      Height="56"
-                                      HorizontalAlignment="Center"
-                                      IsActive="{Binding IsLoading}" />
-                    <TextBlock Margin="0,16,0,0"
-                               HorizontalAlignment="Center"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Text="Working securely" />
-                    <TextBlock Margin="0,8,0,0"
-                               HorizontalAlignment="Center"
-                               Foreground="#FF555555"
-                               Text="{Binding LoadingStatusText}"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
+            <TabItem Header="Settings">
+                <ScrollViewer Margin="0,12,0,0"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="620">
+                        <Border Margin="0,0,0,12"
+                                Padding="14"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <StackPanel>
+                                <TextBlock FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Text="Clipboard settings" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="Configure how copied field values are cleared from the system clipboard."
+                                           TextWrapping="Wrap" />
+                                <CheckBox Margin="0,12,0,0"
+                                          Content="Auto-clear copied field values"
+                                          IsChecked="{Binding IsClipboardAutoClearEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <DockPanel Margin="0,8,0,0"
+                                           LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"
+                                               Text="Clear after" />
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Text="seconds" />
+                                    <mah:NumericUpDown Minimum="1"
+                                                       Interval="1"
+                                                       NumericInputMode="Numbers"
+                                                       Value="{Binding ClipboardAutoClearDelaySeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                       ToolTip="Positive whole seconds before StructVault clears an unchanged copied value" />
+                                </DockPanel>
+                                <Button Margin="0,12,0,0"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding ApplyClipboardSettingsCommand}"
+                                        Content="Apply settings" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="{Binding ClipboardSettingsStatusText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
 
-            <Border Grid.ColumnSpan="3"
-                    Background="#EFFFFFFF"
-                    BorderBrush="#FFB0B0B0"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Visibility="{Binding IsVaultLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <StackPanel MaxWidth="420"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center"
-                               FontSize="24"
-                               FontWeight="SemiBold"
-                               Text="Vault locked" />
-                    <TextBlock Margin="0,12,0,0"
-                               HorizontalAlignment="Center"
-                               Foreground="#FF555555"
-                               Text="StructVault locked this vault after the configured idle timeout. Enter the master password to unlock it."
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
-                    <Button Margin="0,18,0,0"
-                            MinWidth="120"
-                            Padding="14,7"
-                            HorizontalAlignment="Center"
-                            Command="{Binding UnlockVaultCommand}"
-                            Content="Unlock" />
-                </StackPanel>
-            </Border>
-            </Grid>
-        </Grid>
+                        <Border Margin="0,0,0,12"
+                                Padding="14"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <StackPanel>
+                                <TextBlock FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Text="Idle lock settings" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="Configure when the open encrypted vault locks after inactivity."
+                                           TextWrapping="Wrap" />
+                                <CheckBox Margin="0,12,0,0"
+                                          Content="Lock vault after inactivity"
+                                          IsChecked="{Binding IsIdleLockEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <DockPanel Margin="0,8,0,0"
+                                           LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"
+                                               Text="Lock after" />
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Text="seconds" />
+                                    <mah:NumericUpDown Minimum="1"
+                                                       Interval="1"
+                                                       NumericInputMode="Numbers"
+                                                       Value="{Binding IdleLockTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                       ToolTip="Positive whole seconds before StructVault locks the open encrypted vault" />
+                                </DockPanel>
+                                <Button Margin="0,12,0,0"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding ApplyIdleLockSettingsCommand}"
+                                        Content="Apply idle lock" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="{Binding IdleLockSettingsStatusText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0"
+                                Padding="14"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <StackPanel>
+                                <TextBlock FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Text="Theme settings" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="Choose a built-in MahApps.Metro light color theme. Custom dark styling has been removed so the app follows MahApps resources consistently."
+                                           TextWrapping="Wrap" />
+                                <ComboBox Margin="0,12,0,0"
+                                          DisplayMemberPath="DisplayName"
+                                          ItemsSource="{Binding ThemeOptions}"
+                                          SelectedValue="{Binding SelectedThemeName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="ThemeName"
+                                          ToolTip="Switch between supported MahApps.Metro color themes" />
+                                <Button Margin="0,12,0,0"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding ApplyThemeSettingsCommand}"
+                                        Content="Apply theme" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="{Binding ThemeSettingsStatusText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </mah:MetroTabControl>
     </Grid>
 </mah:MetroWindow>
