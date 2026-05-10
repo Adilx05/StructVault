@@ -75,10 +75,12 @@ dotnet test StructVault.sln
 ./tools/build-msi.ps1
 ```
 
-The MSI setup is generated with WiX, registers `.qps` vault files with Windows,
-and makes double-clicked QPS files open in StructVault. The current product
-version starts at `1.0.0`; the setup build script automatically increments the
-patch number in `Directory.Build.props` after each successful installer build.
+The MSI setup is generated with WiX, shows a standard wizard with the MIT license
+and install-directory selection, creates desktop and Start menu shortcuts,
+registers `.qps` vault files with Windows, and makes double-clicked QPS files open
+in StructVault from the selected install folder. The current product version
+starts at `1.0.0`; the setup build script automatically increments the patch
+number in `Directory.Build.props` after each successful installer build.
 
 ## Usage
 

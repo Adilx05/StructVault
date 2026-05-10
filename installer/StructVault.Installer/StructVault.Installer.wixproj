@@ -8,6 +8,10 @@
     <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir)</DefineConstants>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
   <Target Name="PublishDesktopApp" BeforeTargets="BeforeBuild">
     <MSBuild Projects="..\..\src\StructVault.Desktop\StructVault.Desktop.csproj"
              Targets="Restore;Publish"

@@ -1,4 +1,5 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="StructVault"
            Manufacturer="StructVault"
            Version="$(var.ProductVersion)"
@@ -9,9 +10,13 @@
     <MediaTemplate EmbedCab="yes" />
     <Icon Id="StructVaultIcon" SourceFile="..\..\src\StructVault.Desktop\Assets\logo.ico" />
     <Property Id="ARPPRODUCTICON" Value="StructVaultIcon" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
     <Feature Id="MainFeature" Title="StructVault" Level="1">
       <ComponentGroupRef Id="PublishedApplicationFiles" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="StartMenuShortcuts" />
       <ComponentRef Id="QpsFileAssociation" />
     </Feature>
   </Package>
@@ -20,12 +25,47 @@
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="StructVault" />
     </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="StructVault" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
   </Fragment>
 
   <Fragment>
     <ComponentGroup Id="PublishedApplicationFiles" Directory="INSTALLFOLDER">
       <Files Include="$(var.PublishDir)**\*" />
     </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="DesktopShortcut" Directory="INSTALLFOLDER" Guid="56C0AE67-94DE-4E48-8B79-0E3A215C3CE5">
+      <Shortcut Id="StructVaultDesktopShortcut"
+                Directory="DesktopFolder"
+                Name="StructVault"
+                Description="Open StructVault"
+                Target="[INSTALLFOLDER]StructVault.Desktop.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="StructVaultIcon" />
+      <RegistryValue Root="HKLM" Key="Software\StructVault" Name="DesktopShortcut" Value="1" Type="integer" KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="StartMenuShortcuts" Directory="ApplicationProgramsFolder" Guid="B43EA2F4-A2CD-4B7F-B85A-69E0726E714A">
+      <Shortcut Id="StructVaultStartMenuShortcut"
+                Name="StructVault"
+                Description="Open StructVault"
+                Target="[INSTALLFOLDER]StructVault.Desktop.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="StructVaultIcon" />
+      <Shortcut Id="StructVaultUninstallShortcut"
+                Name="Uninstall StructVault"
+                Description="Uninstall StructVault"
+                Target="[System64Folder]msiexec.exe"
+                Arguments="/x [ProductCode]" />
+      <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKLM" Key="Software\StructVault" Name="StartMenuShortcuts" Value="1" Type="integer" KeyPath="yes" />
+    </Component>
   </Fragment>
 
   <Fragment>

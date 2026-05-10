@@ -2,8 +2,9 @@
 
 StructVault uses WiX Toolset SDK to build a per-machine MSI setup package.
 The installer publishes the WPF desktop app as a self-contained `win-x64` build,
-packages the published output, and registers the `.qps` file type so double-clicking
-a QPS vault opens StructVault.
+packages the published output, creates desktop and Start menu shortcuts, shows a
+wizard with the MIT license and install-directory selection, and registers the `.qps`
+file type so double-clicking a QPS vault opens StructVault from the selected install folder.
 
 ## Build the MSI
 
