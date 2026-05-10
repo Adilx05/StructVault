@@ -662,7 +662,7 @@ ul {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 24px;
     background: var(--background);
@@ -961,6 +961,11 @@ ul {
     max-width: 300px;
 }
 
+.footer-links {
+    display: flex;
+    gap: 16rem;
+}
+
 .footer-column h4 {
     font-size: 14px;
     font-weight: 600;
@@ -1187,6 +1192,11 @@ ul {
 
     .footer-brand p {
         max-width: 100%;
+    }
+
+    .footer-links {
+        flex-direction: column;
+        gap: 32px;
     }
 
     .footer-column {
