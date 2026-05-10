@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StructVault.Persistence", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StructVault.Desktop", "src\StructVault.Desktop\StructVault.Desktop.csproj", "{4224E199-9C2E-4FB1-860E-2C83683CB0A9}"
 EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "StructVault.Installer", "installer\StructVault.Installer\StructVault.Installer.wixproj", "{D733732A-C3E8-45CC-B549-D453F8D58AE9}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StructVault.Architecture.Tests", "tests\StructVault.Architecture.Tests\StructVault.Architecture.Tests.csproj", "{8231D265-93D0-4792-88C4-843D326E3B63}"
 EndProject
 Global
@@ -48,6 +50,10 @@ Global
 		{8231D265-93D0-4792-88C4-843D326E3B63}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8231D265-93D0-4792-88C4-843D326E3B63}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8231D265-93D0-4792-88C4-843D326E3B63}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D733732A-C3E8-45CC-B549-D453F8D58AE9}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{D733732A-C3E8-45CC-B549-D453F8D58AE9}.Debug|Any CPU.Build.0 = Debug|x64
+		{D733732A-C3E8-45CC-B549-D453F8D58AE9}.Release|Any CPU.ActiveCfg = Release|x64
+		{D733732A-C3E8-45CC-B549-D453F8D58AE9}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -58,6 +64,7 @@ Global
 		{C95C0D17-5B87-462E-92BB-F9940AFA8C24} = {C32F8D9F-1E21-4C11-8C87-059A19B2C78E}
 		{C900D3C0-1BA8-41A0-8C32-D21812D4192B} = {C32F8D9F-1E21-4C11-8C87-059A19B2C78E}
 		{4224E199-9C2E-4FB1-860E-2C83683CB0A9} = {C32F8D9F-1E21-4C11-8C87-059A19B2C78E}
+		{D733732A-C3E8-45CC-B549-D453F8D58AE9} = {C32F8D9F-1E21-4C11-8C87-059A19B2C78E}
 		{8231D265-93D0-4792-88C4-843D326E3B63} = {A6E96F47-C2F0-443D-88E4-B40B1FB0F03B}
 	EndGlobalSection
 EndGlobal

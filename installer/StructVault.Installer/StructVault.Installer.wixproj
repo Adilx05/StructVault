@@ -1,0 +1,20 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>StructVault-Setup-$(Version)</OutputName>
+    <OutputType>Package</OutputType>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ProductVersion>$(Version)</ProductVersion>
+    <PublishDir>$(MSBuildThisFileDirectory)..\..\artifacts\publish\StructVault.Desktop\</PublishDir>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <Target Name="PublishDesktopApp" BeforeTargets="BeforeBuild">
+    <MSBuild Projects="..\..\src\StructVault.Desktop\StructVault.Desktop.csproj"
+             Targets="Restore;Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=false;PublishDir=$(PublishDir);Version=$(Version);VersionPatch=$(VersionPatch)" />
+  </Target>
+</Project>

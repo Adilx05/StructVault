@@ -436,21 +436,39 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         cancellationToken.ThrowIfCancellationRequested();
         string? lastVaultFilePath = applicationSettings.LastVaultFilePath;
-        if (string.IsNullOrWhiteSpace(lastVaultFilePath) || !File.Exists(lastVaultFilePath))
+        if (string.IsNullOrWhiteSpace(lastVaultFilePath))
+        {
+            return false;
+        }
+
+        return await TryOpenVaultFileWithPasswordPromptAsync(
+            lastVaultFilePath,
+            "Open last vault",
+            cancellationToken)
+            .ConfigureAwait(true);
+    }
+
+    public async Task<bool> TryOpenVaultFileWithPasswordPromptAsync(
+        string vaultFilePath,
+        string passwordDialogTitle = "Open QPS vault",
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(vaultFilePath) || !File.Exists(vaultFilePath))
         {
             return false;
         }
 
         string? requestedPassword = contextMenuInputService.RequestPassword(
-            "Open last vault",
-            $"Enter the master password for '{Path.GetFileName(lastVaultFilePath)}'.");
+            passwordDialogTitle,
+            $"Enter the master password for '{Path.GetFileName(vaultFilePath)}'.");
         string? password = NormalizeRequiredUserText(requestedPassword, "Vault password", "A non-empty master password is required.");
         if (password is null)
         {
             return false;
         }
 
-        return await OpenVaultFileAsync(lastVaultFilePath, password, cancellationToken).ConfigureAwait(true);
+        return await OpenVaultFileAsync(vaultFilePath, password, cancellationToken).ConfigureAwait(true);
     }
 
     public async Task<bool> OpenVaultFileAsync(string vaultFilePath, string password, CancellationToken cancellationToken = default)
