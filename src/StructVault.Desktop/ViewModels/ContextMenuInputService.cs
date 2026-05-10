@@ -85,6 +85,21 @@ public sealed class ContextMenuInputService : IContextMenuInputService
         return password is null ? null : new VaultSaveTargetInput(fileDialog.FileName, password);
     }
 
+
+    public string? RequestOpenVaultFile(string title)
+    {
+        OpenFileDialog fileDialog = new()
+        {
+            Title = title,
+            Filter = "StructVault QPS vault (*.qps)|*.qps|All files (*.*)|*.*",
+            DefaultExt = ".qps",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        return fileDialog.ShowDialog() == true ? fileDialog.FileName : null;
+    }
+
     public bool ConfirmDelete(string title, string message)
     {
         string choice = ShowMahAppsChoiceDialog(

@@ -174,7 +174,22 @@ public sealed class MainWindowLayoutTests
         Assert.Contains("ConfigureDefaultViewModel();", codeBehind);
         Assert.Contains("DataContext = new MainWindowViewModel(sender);", codeBehind);
         Assert.Contains("LoadInitialVaultAsync(sender)", codeBehind);
+        Assert.Contains("LoadApplicationSettings()", codeBehind);
+        Assert.Contains("TryOpenLastVaultAsync()", codeBehind);
         Assert.Contains("new CreateInMemoryVaultDatabaseCommand()", codeBehind);
+    }
+
+
+    [Fact]
+    public void MainWindowProvidesOpenQpsButton()
+    {
+        XDocument mainWindow = XDocument.Load(GetRepositoryFile("src/StructVault.Desktop/MainWindow.xaml"));
+
+        XElement openButton = Assert.Single(mainWindow
+            .Descendants(PresentationNamespace + "Button")
+            .Where(element => (string?)element.Attribute("Content") == "Open QPS"));
+
+        Assert.Equal("{Binding OpenVaultCommand}", (string?)openButton.Attribute("Command"));
     }
 
     [Fact]

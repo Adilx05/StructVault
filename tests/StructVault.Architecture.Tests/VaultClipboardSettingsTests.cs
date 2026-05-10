@@ -1,3 +1,4 @@
+using StructVault.Desktop.Services;
 using System.Data.Common;
 using MediatR;
 using Microsoft.Data.Sqlite;
@@ -79,10 +80,15 @@ public sealed class VaultClipboardSettingsTests
         VaultFieldRecord field = new("field-secret", "node-root", "Secret", "value"u8.ToArray(), 0, Timestamp, Timestamp);
         RecordingSender sender = new([root])
         {
-            ClipboardSettings = new ClipboardSettingsRecord(false, TimeSpan.FromSeconds(90)),
             FieldsByNodeId = { ["node-root"] = new[] { field } }
         };
-        MainWindowViewModel viewModel = new(sender);
+        InMemoryApplicationSettingsService settingsService = new(new ApplicationSettings
+        {
+            ClipboardAutoClearEnabled = false,
+            ClipboardAutoClearDelaySeconds = 90
+        });
+        MainWindowViewModel viewModel = new(sender, new ContextMenuInputService(), new UiResponsivenessOptions(), new NoopThemeService(), settingsService);
+        viewModel.LoadApplicationSettings();
         await using DbConnection connection = await CreateVaultConnectionAsync();
 
         await viewModel.LoadVaultTreeAsync(connection);
@@ -95,11 +101,12 @@ public sealed class VaultClipboardSettingsTests
     }
 
     [Fact]
-    public async Task MainWindowViewModelSavesClipboardSettingsThroughCommandAndMarksVaultDirty()
+    public async Task MainWindowViewModelSavesClipboardSettingsAsApplicationSettings()
     {
         VaultNodeHierarchyRecord root = new("node-root", null, "Root", 0, Timestamp, Timestamp, Array.Empty<VaultNodeHierarchyRecord>());
         RecordingSender sender = new([root]);
-        MainWindowViewModel viewModel = new(sender);
+        InMemoryApplicationSettingsService settingsService = new();
+        MainWindowViewModel viewModel = new(sender, new ContextMenuInputService(), new UiResponsivenessOptions(), new NoopThemeService(), settingsService);
         await using DbConnection connection = await CreateVaultConnectionAsync();
         await viewModel.LoadVaultTreeAsync(connection);
 
@@ -107,10 +114,9 @@ public sealed class VaultClipboardSettingsTests
         viewModel.ClipboardAutoClearDelaySeconds = 75;
         await ((AsyncCommand)viewModel.ApplyClipboardSettingsCommand).ExecuteAsync(null);
 
-        SaveClipboardSettingsCommand command = Assert.IsType<SaveClipboardSettingsCommand>(sender.LastRequest);
-        Assert.False(command.AutoClearEnabled);
-        Assert.Equal(TimeSpan.FromSeconds(75), command.AutoClearDelay);
-        Assert.True(viewModel.IsDirty);
+        Assert.False(settingsService.Settings.ClipboardAutoClearEnabled);
+        Assert.Equal(75, settingsService.Settings.ClipboardAutoClearDelaySeconds);
+        Assert.False(viewModel.IsDirty);
     }
 
     private static async Task<DbConnection> CreateVaultConnectionAsync()
