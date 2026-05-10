@@ -18,6 +18,8 @@ public sealed class ApplicationSettings
 
     public int IdleLockTimeoutSeconds { get; init; } = (int)IdleLockSettingsRecord.Default.Timeout.TotalSeconds;
 
+    public bool MinimizeToTrayOnClose { get; init; } = true;
+
     public static ApplicationSettings Default { get; } = new();
 
     public ApplicationSettings Normalize()
@@ -33,7 +35,8 @@ public sealed class ApplicationSettings
             IdleLockEnabled = IdleLockEnabled,
             IdleLockTimeoutSeconds = IdleLockTimeoutSeconds <= 0
                 ? (int)IdleLockSettingsRecord.Default.Timeout.TotalSeconds
-                : IdleLockTimeoutSeconds
+                : IdleLockTimeoutSeconds,
+            MinimizeToTrayOnClose = MinimizeToTrayOnClose
         };
     }
 }

@@ -574,6 +574,35 @@
                                            TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
+
+                        <Border Margin="0"
+                                Padding="14"
+                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Control.Border}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <StackPanel>
+                                <TextBlock FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Text="Tray settings" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="Configure how StructVault behaves when the window is closed."
+                                           TextWrapping="Wrap" />
+                                <CheckBox Margin="0,12,0,0"
+                                          Content="Minimize to tray on close"
+                                          IsChecked="{Binding MinimizeToTrayOnClose, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Margin="0,12,0,0"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding ApplyTraySettingsCommand}"
+                                        Content="Apply settings" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="{DynamicResource MahApps.Brushes.Text}"
+                                           Text="{Binding TraySettingsStatusText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

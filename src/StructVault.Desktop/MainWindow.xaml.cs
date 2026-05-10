@@ -84,6 +84,21 @@ public partial class MainWindow : MetroWindow
         Loaded += async (_, _) => await LoadInitialVaultAsync(sender, initialVaultFilePath).ConfigureAwait(true);
     }
 
+    public void MinimizeToTray()
+    {
+        Hide();
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+    }
+
+    public void ForceClose()
+    {
+        closeConfirmed = true;
+        Close();
+    }
+
     private async void MainWindowLoaded(object sender, RoutedEventArgs e)
     {
         await ReportUserActivityAsync(force: true).ConfigureAwait(true);
@@ -172,30 +187,53 @@ public partial class MainWindow : MetroWindow
 
     private async void MainWindowClosing(object? sender, CancelEventArgs e)
     {
-        if (closeConfirmed || DataContext is not MainWindowViewModel viewModel || !viewModel.IsDirty)
+        if (closeConfirmed)
         {
             return;
         }
 
-        e.Cancel = true;
-        if (closeConfirmationInProgress)
+        if (DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }
 
-        closeConfirmationInProgress = true;
-        try
+        bool isDirty = viewModel.IsDirty;
+        bool minimizeToTray = viewModel.MinimizeToTrayOnClose;
+
+        if (isDirty)
         {
-            bool shouldClose = await viewModel.ConfirmExitAsync().ConfigureAwait(true);
-            if (shouldClose)
+            e.Cancel = true;
+            if (closeConfirmationInProgress)
             {
-                closeConfirmed = true;
-                _ = Dispatcher.BeginInvoke(new Action(Close), DispatcherPriority.ApplicationIdle);
+                return;
+            }
+
+            closeConfirmationInProgress = true;
+            try
+            {
+                bool shouldClose = await viewModel.ConfirmExitAsync().ConfigureAwait(true);
+                if (shouldClose)
+                {
+                    closeConfirmed = true;
+                    if (System.Windows.Application.Current is App app)
+                    {
+                        app.RequestShutdown();
+                    }
+                    else
+                    {
+                        await Dispatcher.BeginInvoke(new Action(Close), DispatcherPriority.ApplicationIdle);
+                    }
+                }
+            }
+            finally
+            {
+                closeConfirmationInProgress = false;
             }
         }
-        finally
+        else if (minimizeToTray)
         {
-            closeConfirmationInProgress = false;
+            e.Cancel = true;
+            MinimizeToTray();
         }
     }
 

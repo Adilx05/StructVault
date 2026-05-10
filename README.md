@@ -18,6 +18,7 @@
 - **Theme Support** - Multiple MahApps.Metro color themes
 - **Drag & Drop** - Reorder nodes and fields within their parent via drag and drop
 - **Search** - Find nodes and fields across the vault
+- **System Tray** - Minimize to tray on close
 
 ## Architecture
 

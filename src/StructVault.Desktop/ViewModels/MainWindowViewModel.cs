@@ -60,6 +60,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string idleLockSettingsStatusText = "Idle lock settings use secure defaults.";
     private string selectedThemeName = ThemeSettingsRecord.Default.ThemeName;
     private string themeSettingsStatusText = "Theme settings use the default MahApps color theme.";
+    private bool minimizeToTrayOnClose = true;
+    private string traySettingsStatusText = "Tray settings use secure defaults.";
     private string vaultErrorMessage = string.Empty;
     private string loadingStatusText = "Ready.";
     private bool isVaultLocked;
@@ -125,6 +127,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ApplyClipboardSettingsCommand = new AsyncCommand(ApplyClipboardSettingsAsync, CanMutateVault);
         ApplyIdleLockSettingsCommand = new AsyncCommand(ApplyIdleLockSettingsAsync, CanMutateVault);
         ApplyThemeSettingsCommand = new AsyncCommand(ApplyThemeSettingsAsync, CanMutateVault);
+        ApplyTraySettingsCommand = new AsyncCommand(ApplyTraySettingsAsync, CanMutateVault);
         UnlockVaultCommand = new AsyncCommand(UnlockVaultAsync, CanUnlockVault);
     }
 
@@ -165,6 +168,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand ApplyIdleLockSettingsCommand { get; }
 
     public ICommand ApplyThemeSettingsCommand { get; }
+
+    public ICommand ApplyTraySettingsCommand { get; }
 
     public ICommand UnlockVaultCommand { get; }
 
@@ -347,6 +352,18 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref themeSettingsStatusText, value);
     }
 
+    public bool MinimizeToTrayOnClose
+    {
+        get => minimizeToTrayOnClose;
+        set => SetProperty(ref minimizeToTrayOnClose, value);
+    }
+
+    public string TraySettingsStatusText
+    {
+        get => traySettingsStatusText;
+        private set => SetProperty(ref traySettingsStatusText, value);
+    }
+
     public bool IsVaultLocked
     {
         get => isVaultLocked;
@@ -426,10 +443,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         IsIdleLockEnabled = applicationSettings.IdleLockEnabled;
         IdleLockTimeout = TimeSpan.FromSeconds(applicationSettings.IdleLockTimeoutSeconds);
         SelectedThemeName = applicationSettings.ThemeName;
+        MinimizeToTrayOnClose = applicationSettings.MinimizeToTrayOnClose;
         themeService.ApplyTheme(applicationSettings.ThemeName);
         ClipboardSettingsStatusText = "Clipboard settings loaded from this app.";
         IdleLockSettingsStatusText = "Idle lock settings loaded from this app.";
         ThemeSettingsStatusText = "Theme settings loaded from this app and applied.";
+        TraySettingsStatusText = "Tray settings loaded from this app.";
     }
 
     public async Task<bool> TryOpenLastVaultAsync(CancellationToken cancellationToken = default)
@@ -1071,6 +1090,14 @@ public sealed class MainWindowViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
+    private Task ApplyTraySettingsAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        SaveApplicationSettings(CreateApplicationSettingsSnapshot(activeVaultFilePath));
+        TraySettingsStatusText = "Tray settings saved for this app.";
+        return Task.CompletedTask;
+    }
+
     private async Task CopyFieldValueAsync(object? parameter, CancellationToken cancellationToken)
     {
         VaultFieldViewModel field = RequireFieldParameter(parameter);
@@ -1314,6 +1341,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         RaiseCanExecuteChanged(ApplyClipboardSettingsCommand);
         RaiseCanExecuteChanged(ApplyIdleLockSettingsCommand);
         RaiseCanExecuteChanged(ApplyThemeSettingsCommand);
+        RaiseCanExecuteChanged(ApplyTraySettingsCommand);
         RaiseCanExecuteChanged(UnlockVaultCommand);
     }
 
@@ -1435,7 +1463,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             ClipboardAutoClearEnabled = IsClipboardAutoClearEnabled,
             ClipboardAutoClearDelaySeconds = ClipboardAutoClearDelaySeconds,
             IdleLockEnabled = IsIdleLockEnabled,
-            IdleLockTimeoutSeconds = IdleLockTimeoutSeconds
+            IdleLockTimeoutSeconds = IdleLockTimeoutSeconds,
+            MinimizeToTrayOnClose = MinimizeToTrayOnClose
         }.Normalize();
     }
 

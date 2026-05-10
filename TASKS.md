@@ -183,6 +183,18 @@
 
 ---
 
+## 📡 Phase 14 – System Tray Support
+
+### Implementation
+- [x] Add system tray icon support
+- [x] Minimize to tray on close (if no unsaved changes)
+- [x] Tray context menu: Open GitHub, Exit
+- [x] Exit from tray to close application completely
+- [x] Open vault via command-line args from tray (single instance)
+
+
+---
+
 ## 🧪 Optional Enhancements
 
 - [x] Drag & drop node ordering
