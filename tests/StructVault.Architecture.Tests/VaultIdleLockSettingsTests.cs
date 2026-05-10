@@ -1,3 +1,4 @@
+using StructVault.Desktop.Services;
 using System.Data.Common;
 using MediatR;
 using Microsoft.Data.Sqlite;
@@ -77,10 +78,15 @@ public sealed class VaultIdleLockSettingsTests
         VaultNodeHierarchyRecord root = new("node-root", null, "Root", 0, Timestamp, Timestamp, Array.Empty<VaultNodeHierarchyRecord>());
         RecordingSender sender = new([root])
         {
-            IdleLockSettings = new IdleLockSettingsRecord(true, TimeSpan.FromSeconds(120)),
             LockState = new VaultLockState(true, Timestamp, Timestamp.AddSeconds(120), TimeSpan.FromSeconds(120))
         };
-        MainWindowViewModel viewModel = new(sender);
+        InMemoryApplicationSettingsService settingsService = new(new ApplicationSettings
+        {
+            IdleLockEnabled = true,
+            IdleLockTimeoutSeconds = 120
+        });
+        MainWindowViewModel viewModel = new(sender, new ContextMenuInputService(), new UiResponsivenessOptions(), new NoopThemeService(), settingsService);
+        viewModel.LoadApplicationSettings();
         await using DbConnection connection = await CreateVaultConnectionAsync();
 
         await viewModel.LoadVaultTreeAsync(connection, "vault.qps", "master-password");
@@ -97,10 +103,15 @@ public sealed class VaultIdleLockSettingsTests
         VaultNodeHierarchyRecord root = new("node-root", null, "Root", 0, Timestamp, Timestamp, Array.Empty<VaultNodeHierarchyRecord>());
         RecordingSender sender = new([root])
         {
-            IdleLockSettings = new IdleLockSettingsRecord(false, TimeSpan.FromSeconds(60)),
             LockState = new VaultLockState(true, Timestamp, Timestamp.AddSeconds(60), TimeSpan.FromSeconds(60))
         };
-        MainWindowViewModel viewModel = new(sender);
+        InMemoryApplicationSettingsService settingsService = new(new ApplicationSettings
+        {
+            IdleLockEnabled = false,
+            IdleLockTimeoutSeconds = 60
+        });
+        MainWindowViewModel viewModel = new(sender, new ContextMenuInputService(), new UiResponsivenessOptions(), new NoopThemeService(), settingsService);
+        viewModel.LoadApplicationSettings();
         await using DbConnection connection = await CreateVaultConnectionAsync();
 
         await viewModel.LoadVaultTreeAsync(connection, "vault.qps", "master-password");
@@ -112,11 +123,12 @@ public sealed class VaultIdleLockSettingsTests
     }
 
     [Fact]
-    public async Task MainWindowViewModelSavesIdleLockSettingsThroughCommandAndMarksVaultDirty()
+    public async Task MainWindowViewModelSavesIdleLockSettingsAsApplicationSettings()
     {
         VaultNodeHierarchyRecord root = new("node-root", null, "Root", 0, Timestamp, Timestamp, Array.Empty<VaultNodeHierarchyRecord>());
         RecordingSender sender = new([root]);
-        MainWindowViewModel viewModel = new(sender);
+        InMemoryApplicationSettingsService settingsService = new();
+        MainWindowViewModel viewModel = new(sender, new ContextMenuInputService(), new UiResponsivenessOptions(), new NoopThemeService(), settingsService);
         await using DbConnection connection = await CreateVaultConnectionAsync();
         await viewModel.LoadVaultTreeAsync(connection);
 
@@ -124,10 +136,9 @@ public sealed class VaultIdleLockSettingsTests
         viewModel.IdleLockTimeoutSeconds = 180;
         await ((AsyncCommand)viewModel.ApplyIdleLockSettingsCommand).ExecuteAsync(null);
 
-        SaveIdleLockSettingsCommand command = Assert.IsType<SaveIdleLockSettingsCommand>(sender.LastRequest);
-        Assert.False(command.IsEnabled);
-        Assert.Equal(TimeSpan.FromSeconds(180), command.Timeout);
-        Assert.True(viewModel.IsDirty);
+        Assert.False(settingsService.Settings.IdleLockEnabled);
+        Assert.Equal(180, settingsService.Settings.IdleLockTimeoutSeconds);
+        Assert.False(viewModel.IsDirty);
     }
 
     private static async Task<DbConnection> CreateVaultConnectionAsync()
