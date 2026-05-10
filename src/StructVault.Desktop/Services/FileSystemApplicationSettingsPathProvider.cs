@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace StructVault.Desktop.Services;
 
 public static class FileSystemApplicationSettingsPathProvider
