@@ -1,4 +1,3 @@
-using System.Windows;
 using ControlzEx.Theming;
 using StructVault.Application.Persistence;
 
@@ -9,7 +8,7 @@ public sealed class MahAppsThemeService : IThemeService
     public void ApplyTheme(string themeName)
     {
         string normalizedThemeName = ThemeSettingsRecord.NormalizeThemeName(themeName);
-        Application? application = Application.Current;
+        global::System.Windows.Application? application = global::System.Windows.Application.Current; 
         if (application is null)
         {
             return;
