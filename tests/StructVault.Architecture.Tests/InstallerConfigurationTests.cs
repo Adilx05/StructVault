@@ -1,0 +1,52 @@
+using System.Xml.Linq;
+using Xunit;
+
+namespace StructVault.Architecture.Tests;
+
+public sealed class InstallerConfigurationTests
+{
+    [Fact]
+    public void InstallerRegistersQpsFilesToOpenWithStructVault()
+    {
+        string package = File.ReadAllText(GetRepositoryFile("installer/StructVault.Installer/Package.wxs"));
+
+        Assert.Contains("Key=\".qps\"", package, StringComparison.Ordinal);
+        Assert.Contains("Value=\"StructVault.qps\"", package, StringComparison.Ordinal);
+        Assert.Contains("StructVault.qps\\shell\\open\\command", package, StringComparison.Ordinal);
+        Assert.Contains("StructVault.Desktop.exe&quot; &quot;%1", package, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InstallerUsesCentralProductVersionStartingAtOneZeroZero()
+    {
+        XDocument versions = XDocument.Load(GetRepositoryFile("Directory.Build.props"));
+        string? major = versions.Descendants("VersionMajor").Single().Value;
+        string? minor = versions.Descendants("VersionMinor").Single().Value;
+        string? patch = versions.Descendants("VersionPatch").Single().Value;
+        string installerProject = File.ReadAllText(GetRepositoryFile("installer/StructVault.Installer/StructVault.Installer.wixproj"));
+        string buildScript = File.ReadAllText(GetRepositoryFile("tools/build-msi.ps1"));
+
+        Assert.Equal("1", major);
+        Assert.Equal("0", minor);
+        Assert.Equal("0", patch);
+        Assert.Contains("<ProductVersion>$(Version)</ProductVersion>", installerProject, StringComparison.Ordinal);
+        Assert.Contains("$versionPatchNode.InnerText = [string]$nextPatch", buildScript, StringComparison.Ordinal);
+    }
+
+    private static string GetRepositoryFile(string relativePath)
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TASKS.md")))
+        {
+            directory = directory.Parent;
+        }
+
+        if (directory is null)
+        {
+            throw new DirectoryNotFoundException("Could not locate the repository root containing TASKS.md.");
+        }
+
+        return Path.Combine(directory.FullName, relativePath);
+    }
+}

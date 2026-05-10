@@ -1,0 +1,40 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="StructVault"
+           Manufacturer="StructVault"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="5F8D14D0-1288-4A69-8A54-9B0872A20ED6"
+           Scope="perMachine">
+    <SummaryInformation Description="StructVault setup" Manufacturer="StructVault" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of StructVault is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <Icon Id="StructVaultIcon" SourceFile="..\..\src\StructVault.Desktop\Assets\logo.ico" />
+    <Property Id="ARPPRODUCTICON" Value="StructVaultIcon" />
+
+    <Feature Id="MainFeature" Title="StructVault" Level="1">
+      <ComponentGroupRef Id="PublishedApplicationFiles" />
+      <ComponentRef Id="QpsFileAssociation" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="StructVault" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="PublishedApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)**\*" />
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="QpsFileAssociation" Directory="INSTALLFOLDER" Guid="6BB2A323-70BE-4712-8F98-A7712250765D">
+      <RegistryValue Root="HKCR" Key=".qps" Value="StructVault.qps" Type="string" KeyPath="yes" />
+      <RegistryValue Root="HKCR" Key=".qps" Name="Content Type" Value="application/x-structvault-qps" Type="string" />
+      <RegistryValue Root="HKCR" Key="StructVault.qps" Value="StructVault QPS Vault" Type="string" />
+      <RegistryValue Root="HKCR" Key="StructVault.qps\DefaultIcon" Value="[INSTALLFOLDER]StructVault.Desktop.exe,0" Type="string" />
+      <RegistryValue Root="HKCR" Key="StructVault.qps\shell\open\command" Value="&quot;[INSTALLFOLDER]StructVault.Desktop.exe&quot; &quot;%1&quot;" Type="string" />
+    </Component>
+  </Fragment>
+</Wix>

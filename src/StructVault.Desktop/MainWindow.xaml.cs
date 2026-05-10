@@ -28,10 +28,15 @@ public partial class MainWindow : MetroWindow
     private DateTimeOffset lastActivityReportUtc = DateTimeOffset.MinValue;
 
     public MainWindow()
+        : this(initialVaultFilePath: null)
+    {
+    }
+
+    public MainWindow(string? initialVaultFilePath)
     {
         InitializeComponent();
         idleLockTimer = CreateIdleLockTimer();
-        ConfigureDefaultViewModel();
+        ConfigureDefaultViewModel(initialVaultFilePath);
         ConfigureActivityTracking();
         ConfigureIdleLockMonitoring();
     }
@@ -71,12 +76,12 @@ public partial class MainWindow : MetroWindow
         Closed += (_, _) => idleLockTimer.Stop();
     }
 
-    private void ConfigureDefaultViewModel()
+    private void ConfigureDefaultViewModel(string? initialVaultFilePath)
     {
         DesktopVaultSender sender = new();
         DataContext = new MainWindowViewModel(sender);
         Closing += MainWindowClosing;
-        Loaded += async (_, _) => await LoadInitialVaultAsync(sender).ConfigureAwait(true);
+        Loaded += async (_, _) => await LoadInitialVaultAsync(sender, initialVaultFilePath).ConfigureAwait(true);
     }
 
     private async void MainWindowLoaded(object sender, RoutedEventArgs e)
@@ -116,7 +121,7 @@ public partial class MainWindow : MetroWindow
         await viewModel.RecordUserActivityAsync().ConfigureAwait(true);
     }
 
-    private async Task LoadInitialVaultAsync(DesktopVaultSender sender)
+    private async Task LoadInitialVaultAsync(DesktopVaultSender sender, string? initialVaultFilePath)
     {
         if (DataContext is not MainWindowViewModel viewModel)
         {
@@ -126,7 +131,9 @@ public partial class MainWindow : MetroWindow
         try
         {
             viewModel.LoadApplicationSettings();
-            bool openedLastVault = await viewModel.TryOpenLastVaultAsync().ConfigureAwait(true);
+            bool openedLastVault = !string.IsNullOrWhiteSpace(initialVaultFilePath)
+                ? await viewModel.TryOpenVaultFileWithPasswordPromptAsync(initialVaultFilePath).ConfigureAwait(true)
+                : await viewModel.TryOpenLastVaultAsync().ConfigureAwait(true);
             if (!openedLastVault)
             {
                 System.Data.Common.DbConnection connection = await sender

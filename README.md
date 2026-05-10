@@ -69,6 +69,17 @@ dotnet run --project src/StructVault.Desktop/StructVault.Desktop.csproj
 dotnet test StructVault.sln
 ```
 
+### Build MSI setup
+
+```powershell
+./tools/build-msi.ps1
+```
+
+The MSI setup is generated with WiX, registers `.qps` vault files with Windows,
+and makes double-clicked QPS files open in StructVault. The current product
+version starts at `1.0.0`; the setup build script automatically increments the
+patch number in `Directory.Build.props` after each successful installer build.
+
 ## Usage
 
 1. **Open/Create Vault** - Use the file dialog to load a `.qps` vault file or create a new one
