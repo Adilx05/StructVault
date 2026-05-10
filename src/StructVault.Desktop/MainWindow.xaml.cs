@@ -125,10 +125,16 @@ public partial class MainWindow : MetroWindow
 
         try
         {
-            System.Data.Common.DbConnection connection = await sender
-                .Send(new CreateInMemoryVaultDatabaseCommand(), CancellationToken.None)
-                .ConfigureAwait(true);
-            await viewModel.LoadVaultTreeAsync(connection).ConfigureAwait(true);
+            viewModel.LoadApplicationSettings();
+            bool openedLastVault = await viewModel.TryOpenLastVaultAsync().ConfigureAwait(true);
+            if (!openedLastVault)
+            {
+                System.Data.Common.DbConnection connection = await sender
+                    .Send(new CreateInMemoryVaultDatabaseCommand(), CancellationToken.None)
+                    .ConfigureAwait(true);
+                await viewModel.LoadVaultTreeAsync(connection).ConfigureAwait(true);
+            }
+
             await WriteOperationalLogAsync(sender, ApplicationLogLevel.Information, "Desktop", "InitialVaultLoaded", null)
                 .ConfigureAwait(true);
         }

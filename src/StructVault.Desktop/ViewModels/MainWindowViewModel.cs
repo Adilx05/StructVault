@@ -38,6 +38,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly IContextMenuInputService contextMenuInputService;
     private readonly UiResponsivenessOptions uiResponsivenessOptions;
     private readonly IThemeService themeService;
+    private readonly IApplicationSettingsService applicationSettingsService;
     private readonly ObservableCollection<VaultTreeNodeViewModel> vaultNodes = new();
     private readonly ObservableCollection<VaultFieldViewModel> selectedFields = new();
     private readonly ObservableCollection<VaultSearchResultViewModel> searchResults = new();
@@ -64,6 +65,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool isDirty;
     private bool isLoading;
     private int loadingScopeDepth;
+    private ApplicationSettings applicationSettings = ApplicationSettings.Default;
 
     public MainWindowViewModel(ISender sender)
         : this(sender, new ContextMenuInputService())
@@ -88,15 +90,27 @@ public sealed class MainWindowViewModel : ViewModelBase
         IContextMenuInputService contextMenuInputService,
         UiResponsivenessOptions uiResponsivenessOptions,
         IThemeService themeService)
+        : this(sender, contextMenuInputService, uiResponsivenessOptions, themeService, new FileSystemApplicationSettingsService())
+    {
+    }
+
+    public MainWindowViewModel(
+        ISender sender,
+        IContextMenuInputService contextMenuInputService,
+        UiResponsivenessOptions uiResponsivenessOptions,
+        IThemeService themeService,
+        IApplicationSettingsService applicationSettingsService)
     {
         this.sender = sender ?? throw new ArgumentNullException(nameof(sender));
         this.contextMenuInputService = contextMenuInputService ?? throw new ArgumentNullException(nameof(contextMenuInputService));
         this.uiResponsivenessOptions = uiResponsivenessOptions ?? throw new ArgumentNullException(nameof(uiResponsivenessOptions));
         this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+        this.applicationSettingsService = applicationSettingsService ?? throw new ArgumentNullException(nameof(applicationSettingsService));
         readOnlyVaultNodes = new ReadOnlyObservableCollection<VaultTreeNodeViewModel>(vaultNodes);
         readOnlySelectedFields = new ReadOnlyObservableCollection<VaultFieldViewModel>(selectedFields);
         readOnlySearchResults = new ReadOnlyObservableCollection<VaultSearchResultViewModel>(searchResults);
 
+        OpenVaultCommand = new AsyncCommand(OpenVaultAsync, CanOpenVault);
         SaveVaultCommand = new AsyncCommand((parameter, cancellationToken) => SaveVaultAsync(parameter, cancellationToken), CanSaveVault);
         SearchVaultCommand = new AsyncCommand((parameter, cancellationToken) => SearchVaultAsync(cancellationToken), CanSearchVault);
         AddRootNodeCommand = new AsyncCommand(AddRootNodeAsync, CanMutateVault);
@@ -122,6 +136,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<VaultSearchFilterOption> SearchFilterOptions => AvailableSearchFilterOptions;
 
     public IReadOnlyList<VaultThemeOption> ThemeOptions => AvailableThemeOptions;
+
+    public ICommand OpenVaultCommand { get; }
 
     public ICommand SaveVaultCommand { get; }
 
@@ -401,6 +417,80 @@ public sealed class MainWindowViewModel : ViewModelBase
         return sender.Send(new RecordUserActivityCommand(), cancellationToken);
     }
 
+    public void LoadApplicationSettings()
+    {
+        applicationSettings = applicationSettingsService.Load().Normalize();
+        IsClipboardAutoClearEnabled = applicationSettings.ClipboardAutoClearEnabled;
+        ClipboardAutoClearDelay = TimeSpan.FromSeconds(applicationSettings.ClipboardAutoClearDelaySeconds);
+        IsIdleLockEnabled = applicationSettings.IdleLockEnabled;
+        IdleLockTimeout = TimeSpan.FromSeconds(applicationSettings.IdleLockTimeoutSeconds);
+        SelectedThemeName = applicationSettings.ThemeName;
+        themeService.ApplyTheme(applicationSettings.ThemeName);
+        ClipboardSettingsStatusText = "Clipboard settings loaded from this app.";
+        IdleLockSettingsStatusText = "Idle lock settings loaded from this app.";
+        ThemeSettingsStatusText = "Theme settings loaded from this app and applied.";
+    }
+
+    public async Task<bool> TryOpenLastVaultAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string? lastVaultFilePath = applicationSettings.LastVaultFilePath;
+        if (string.IsNullOrWhiteSpace(lastVaultFilePath) || !File.Exists(lastVaultFilePath))
+        {
+            return false;
+        }
+
+        string? requestedPassword = contextMenuInputService.RequestPassword(
+            "Open last vault",
+            $"Enter the master password for '{Path.GetFileName(lastVaultFilePath)}'.");
+        string? password = NormalizeRequiredUserText(requestedPassword, "Vault password", "A non-empty master password is required.");
+        if (password is null)
+        {
+            return false;
+        }
+
+        return await OpenVaultFileAsync(lastVaultFilePath, password, cancellationToken).ConfigureAwait(true);
+    }
+
+    public async Task<bool> OpenVaultFileAsync(string vaultFilePath, string password, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(vaultFilePath))
+        {
+            throw new ArgumentException("A QPS vault file path is required.", nameof(vaultFilePath));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("A non-empty password is required.", nameof(password));
+        }
+
+        using IDisposable loadingScope = BeginLoading("Opening vault...");
+        try
+        {
+            byte[] databaseImage = await sender
+                .Send(new OpenQpsVaultFileQuery(vaultFilePath, password), cancellationToken)
+                .ConfigureAwait(true);
+            DbConnection connection = await sender
+                .Send(new DeserializeVaultDatabaseCommand(databaseImage), cancellationToken)
+                .ConfigureAwait(true);
+            if (activeConnection is not null && !ReferenceEquals(activeConnection, connection))
+            {
+                await activeConnection.DisposeAsync().ConfigureAwait(true);
+            }
+
+            ConfigureManualSaveTarget(vaultFilePath, password);
+            await LoadVaultTreeAsync(connection, cancellationToken).ConfigureAwait(true);
+            SaveApplicationSettings(CreateApplicationSettingsSnapshot(vaultFilePath));
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            SetVaultError("The QPS vault file could not be opened. Check the selected file and master password.");
+            contextMenuInputService.ShowValidationError("Open failed", VaultErrorMessage + " " + ex.Message);
+            return false;
+        }
+    }
+
     public async Task<bool> LockVaultAfterIdleTimeoutAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -505,6 +595,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ClearVaultError();
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(CanUnlock));
+        RaiseCanExecuteChanged(OpenVaultCommand);
         RaiseCanExecuteChanged(SaveVaultCommand);
     }
 
@@ -746,6 +837,31 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private async Task OpenVaultAsync(object? parameter, CancellationToken cancellationToken)
+    {
+        if (IsDirty && !await ConfirmExitAsync(cancellationToken).ConfigureAwait(true))
+        {
+            return;
+        }
+
+        string? filePath = contextMenuInputService.RequestOpenVaultFile("Open QPS vault");
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        string? requestedPassword = contextMenuInputService.RequestPassword(
+            "Vault password",
+            "Enter the master password for the selected QPS vault file.");
+        string? password = NormalizeRequiredUserText(requestedPassword, "Vault password", "A non-empty master password is required.");
+        if (password is null)
+        {
+            return;
+        }
+
+        await OpenVaultFileAsync(filePath, password, cancellationToken).ConfigureAwait(true);
+    }
+
     private async Task SaveVaultAsync(object? parameter, CancellationToken cancellationToken)
     {
         DbConnection connection = RequireActiveOpenConnection();
@@ -779,6 +895,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         ClearVaultError();
         SetClean();
+        SaveApplicationSettings(CreateApplicationSettingsSnapshot(filePath));
     }
 
     private async Task AddRootNodeAsync(object? parameter, CancellationToken cancellationToken)
@@ -908,60 +1025,31 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private async Task ApplyClipboardSettingsAsync(object? parameter, CancellationToken cancellationToken)
+    private Task ApplyClipboardSettingsAsync(object? parameter, CancellationToken cancellationToken)
     {
-        DbConnection connection = RequireActiveOpenConnection();
-        try
-        {
-            using IDisposable loadingScope = BeginLoading("Saving clipboard settings...");
-            await sender.Send(
-                new SaveClipboardSettingsCommand(connection, IsClipboardAutoClearEnabled, ClipboardAutoClearDelay),
-                cancellationToken).ConfigureAwait(true);
-            ClipboardSettingsStatusText = "Clipboard settings saved. Save the vault file to persist them on disk.";
-            MarkDirty();
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            contextMenuInputService.ShowValidationError("Settings failed", "Clipboard settings could not be saved. " + ex.Message);
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        SaveApplicationSettings(CreateApplicationSettingsSnapshot(activeVaultFilePath));
+        ClipboardSettingsStatusText = "Clipboard settings saved for this app.";
+        return Task.CompletedTask;
     }
 
-    private async Task ApplyIdleLockSettingsAsync(object? parameter, CancellationToken cancellationToken)
+    private Task ApplyIdleLockSettingsAsync(object? parameter, CancellationToken cancellationToken)
     {
-        DbConnection connection = RequireActiveOpenConnection();
-        try
-        {
-            using IDisposable loadingScope = BeginLoading("Saving idle lock settings...");
-            await sender.Send(
-                new SaveIdleLockSettingsCommand(connection, IsIdleLockEnabled, IdleLockTimeout),
-                cancellationToken).ConfigureAwait(true);
-            IdleLockSettingsStatusText = "Idle lock settings saved and applied. Save the vault file to persist them on disk.";
-            MarkDirty();
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            contextMenuInputService.ShowValidationError("Settings failed", "Idle lock settings could not be saved. " + ex.Message);
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        SaveApplicationSettings(CreateApplicationSettingsSnapshot(activeVaultFilePath));
+        IdleLockSettingsStatusText = "Idle lock settings saved for this app.";
+        return Task.CompletedTask;
     }
 
-    private async Task ApplyThemeSettingsAsync(object? parameter, CancellationToken cancellationToken)
+    private Task ApplyThemeSettingsAsync(object? parameter, CancellationToken cancellationToken)
     {
-        DbConnection connection = RequireActiveOpenConnection();
-        try
-        {
-            using IDisposable loadingScope = BeginLoading("Saving theme settings...");
-            string themeName = ThemeSettingsRecord.NormalizeThemeName(SelectedThemeName);
-            await sender.Send(
-                new SaveThemeSettingsCommand(connection, themeName),
-                cancellationToken).ConfigureAwait(true);
-            themeService.ApplyTheme(themeName);
-            ThemeSettingsStatusText = "Theme settings saved and applied. Save the vault file to persist them on disk.";
-            MarkDirty();
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            contextMenuInputService.ShowValidationError("Settings failed", "Theme settings could not be saved. " + ex.Message);
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        string themeName = ThemeSettingsRecord.NormalizeThemeName(SelectedThemeName);
+        SelectedThemeName = themeName;
+        themeService.ApplyTheme(themeName);
+        SaveApplicationSettings(CreateApplicationSettingsSnapshot(activeVaultFilePath));
+        ThemeSettingsStatusText = "Theme settings saved for this app and applied.";
+        return Task.CompletedTask;
     }
 
     private async Task CopyFieldValueAsync(object? parameter, CancellationToken cancellationToken)
@@ -986,64 +1074,31 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private async Task LoadClipboardSettingsAsync(CancellationToken cancellationToken)
+    private Task LoadClipboardSettingsAsync(CancellationToken cancellationToken)
     {
-        DbConnection connection = RequireActiveOpenConnection();
-        try
-        {
-            ClipboardSettingsRecord settings = await sender
-                .Send(new GetClipboardSettingsQuery(connection), cancellationToken)
-                .ConfigureAwait(true);
-            IsClipboardAutoClearEnabled = settings.AutoClearEnabled;
-            ClipboardAutoClearDelay = settings.AutoClearDelay;
-            ClipboardSettingsStatusText = "Clipboard settings loaded.";
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            IsClipboardAutoClearEnabled = ClipboardSettingsRecord.Default.AutoClearEnabled;
-            ClipboardAutoClearDelay = ClipboardSettingsRecord.Default.AutoClearDelay;
-            ClipboardSettingsStatusText = "Clipboard settings reset to secure defaults because saved settings could not be loaded.";
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        IsClipboardAutoClearEnabled = applicationSettings.ClipboardAutoClearEnabled;
+        ClipboardAutoClearDelay = TimeSpan.FromSeconds(applicationSettings.ClipboardAutoClearDelaySeconds);
+        ClipboardSettingsStatusText = "Clipboard settings loaded from this app.";
+        return Task.CompletedTask;
     }
 
-    private async Task LoadIdleLockSettingsAsync(CancellationToken cancellationToken)
+    private Task LoadIdleLockSettingsAsync(CancellationToken cancellationToken)
     {
-        DbConnection connection = RequireActiveOpenConnection();
-        try
-        {
-            IdleLockSettingsRecord settings = await sender
-                .Send(new GetIdleLockSettingsQuery(connection), cancellationToken)
-                .ConfigureAwait(true);
-            IsIdleLockEnabled = settings.IsEnabled;
-            IdleLockTimeout = settings.Timeout;
-            IdleLockSettingsStatusText = "Idle lock settings loaded.";
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            IsIdleLockEnabled = IdleLockSettingsRecord.Default.IsEnabled;
-            IdleLockTimeout = IdleLockSettingsRecord.Default.Timeout;
-            IdleLockSettingsStatusText = "Idle lock settings reset to secure defaults because saved settings could not be loaded.";
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        IsIdleLockEnabled = applicationSettings.IdleLockEnabled;
+        IdleLockTimeout = TimeSpan.FromSeconds(applicationSettings.IdleLockTimeoutSeconds);
+        IdleLockSettingsStatusText = "Idle lock settings loaded from this app.";
+        return Task.CompletedTask;
     }
 
-    private async Task LoadThemeSettingsAsync(CancellationToken cancellationToken)
+    private Task LoadThemeSettingsAsync(CancellationToken cancellationToken)
     {
-        DbConnection connection = RequireActiveOpenConnection();
-        try
-        {
-            ThemeSettingsRecord settings = await sender
-                .Send(new GetThemeSettingsQuery(connection), cancellationToken)
-                .ConfigureAwait(true);
-            SelectedThemeName = settings.ThemeName;
-            themeService.ApplyTheme(settings.ThemeName);
-            ThemeSettingsStatusText = "Theme settings loaded and applied.";
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            SelectedThemeName = ThemeSettingsRecord.Default.ThemeName;
-            themeService.ApplyTheme(ThemeSettingsRecord.Default.ThemeName);
-            ThemeSettingsStatusText = "Theme settings reset to the default MahApps color theme because saved settings could not be loaded.";
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        SelectedThemeName = applicationSettings.ThemeName;
+        themeService.ApplyTheme(applicationSettings.ThemeName);
+        ThemeSettingsStatusText = "Theme settings loaded from this app and applied.";
+        return Task.CompletedTask;
     }
 
     private async Task DeleteFieldAsync(object? parameter, CancellationToken cancellationToken)
@@ -1226,6 +1281,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void RaiseCommandCanExecuteChanged()
     {
+        RaiseCanExecuteChanged(OpenVaultCommand);
         RaiseCanExecuteChanged(SaveVaultCommand);
         RaiseCanExecuteChanged(SearchVaultCommand);
         RaiseCanExecuteChanged(AddRootNodeCommand);
@@ -1267,6 +1323,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool CanMutateVault(object? parameter)
     {
         return !IsLoading && !IsVaultLocked && activeConnection?.State == ConnectionState.Open;
+    }
+
+    private bool CanOpenVault(object? parameter)
+    {
+        return !IsLoading;
     }
 
     private bool CanSaveVault(object? parameter)
@@ -1344,6 +1405,31 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
 
         return field;
+    }
+
+    private ApplicationSettings CreateApplicationSettingsSnapshot(string? lastVaultFilePath)
+    {
+        return new ApplicationSettings
+        {
+            LastVaultFilePath = lastVaultFilePath,
+            ThemeName = SelectedThemeName,
+            ClipboardAutoClearEnabled = IsClipboardAutoClearEnabled,
+            ClipboardAutoClearDelaySeconds = ClipboardAutoClearDelaySeconds,
+            IdleLockEnabled = IsIdleLockEnabled,
+            IdleLockTimeoutSeconds = IdleLockTimeoutSeconds
+        }.Normalize();
+    }
+
+    private void SaveApplicationSettings(ApplicationSettings settings)
+    {
+        applicationSettings = settings.Normalize();
+        try
+        {
+            applicationSettingsService.Save(applicationSettings);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+        }
     }
 
     private string? NormalizeRequiredUserText(string? value, string title, string emptyMessage)

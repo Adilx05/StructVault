@@ -119,6 +119,12 @@
                     Padding="12,6"
                     Command="{Binding SaveVaultCommand}"
                     Content="Save" />
+            <Button DockPanel.Dock="Right"
+                    MinWidth="96"
+                    Margin="0,0,8,0"
+                    Padding="12,6"
+                    Command="{Binding OpenVaultCommand}"
+                    Content="Open QPS" />
             <TextBlock Margin="16,6,0,0"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource MahApps.Brushes.Text}"
@@ -549,7 +555,7 @@
                                            Text="Theme settings" />
                                 <TextBlock Margin="0,4,0,0"
                                            Foreground="{DynamicResource MahApps.Brushes.Text}"
-                                           Text="Choose a built-in MahApps.Metro light color theme. Custom dark styling has been removed so the app follows MahApps resources consistently."
+                                           Text="Choose a built-in MahApps.Metro light color theme. App settings are stored separately from encrypted QPS vault files."
                                            TextWrapping="Wrap" />
                                 <ComboBox Margin="0,12,0,0"
                                           DisplayMemberPath="DisplayName"

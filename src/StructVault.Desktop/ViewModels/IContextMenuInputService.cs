@@ -10,6 +10,8 @@ public interface IContextMenuInputService
 
     VaultSaveTargetInput? RequestSaveTarget(string title, string message) => null;
 
+    string? RequestOpenVaultFile(string title) => null;
+
     bool ConfirmDelete(string title, string message);
 
     UnsavedChangesExitChoice PromptUnsavedChangesOnExit(bool canSave);
