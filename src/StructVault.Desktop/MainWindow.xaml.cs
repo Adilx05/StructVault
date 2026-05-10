@@ -177,7 +177,7 @@ public partial class MainWindow : MetroWindow
             if (shouldClose)
             {
                 closeConfirmed = true;
-                Close();
+                _ = Dispatcher.BeginInvoke(new Action(Close), DispatcherPriority.ApplicationIdle);
             }
         }
         finally
